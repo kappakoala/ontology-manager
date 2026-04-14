@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识本体管理工具 · 方法论v3.7</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+/* ─── 设计语言：深色学术风，参考 Protégé 三面板布局 ─── */
+:root {
+  --bg-base:    #0f1117;
+  --bg-panel:   #161b27;
+  --bg-card:    #1e2535;
+  --bg-hover:   #252e44;
+  --border:     #2a3554;
+  --accent:     #4f8ef7;
+  --accent2:    #7c5cbf;
+  --accent3:    #2ea98b;
+  --warn:       #e07b4a;
+  --danger:     #e05252;
+  --text-pri:   #e8eaf6;
+  --text-sec:   #8892b0;
+  --text-muted: #4a5568;
+  --shadow:     0 4px 24px rgba(0,0,0,.5);
+  /* 五要素颜色 */
+  --color-subject:   #4f8ef7;
+  --color-behavior:  #7c5cbf;
+  --color-object:    #2ea98b;
+  --color-time:      #e0994a;
+  --color-space:     #e05252;
+  --color-problem:   #c0392b;
+  --color-goal:      #27ae60;
+  --color-indicator: #8e44ad;
+  --color-domain:    #2980b9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-pri);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── 顶部导航栏 ─────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -.3px;
+}
+
+.topbar-logo .logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.topbar-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 20px;
+}
+
+.topbar-tab {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-sec);
+  cursor: pointer;
+  transition: all .15s;
+  border: none;
+  background: none;
+}
+
+.topbar-tab:hover { background: var(--bg-hover); color: var(--text-pri); }
+.topbar-tab.active { background: var(--accent); color: #fff; }
+
+.topbar-spacer { flex: 1; }
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  gap: 8px;
+  width: 240px;
+}
+
+.search-box input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-pri);
+  font-size: 13px;
+  width: 100%;
+}
+
+.search-box input::placeholder { color: var(--text-muted); }
+
+.btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #3a7be0; }
+.btn-ghost { background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-pri); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: .85; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* ── 主内容区（三面板）─────────────────────────────── */
+.workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左侧面板：领域树 + 概念分类 */
+.panel-left {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 中间面板：列表 / 编辑器 */
+.panel-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* 右侧面板：详情 / 属性 / 关系 */
+.panel-right {
+  width: 340px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── 面板头部 ─────────────────────────────────────── */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* ── 可滚动内容区 ─────────────────────────────────── */
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── 树形列表 ─────────────────────────────────────── */
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-sec);
+  transition: all .12s;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.tree-item:hover { background: var(--bg-hover); color: var(--text-pri); }
+.tree-item.active {
+  background: rgba(79, 142, 247, .12);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.tree-item .item-icon {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.tree-item .item-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ── 概念卡片列表 ─────────────────────────────────── */
+.concept-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.concept-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all .12s;
+  border-bottom: 1px solid rgba(42,53,84,.4);
+}
+
+.concept-row:hover { background: var(--bg-hover); }
+.concept-row.selected { background: rgba(79,142,247,.1); }
+
+.concept-row .type-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.concept-row .concept-name {
+  font-size: 13px;
+  color: var(--text-pri);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.concept-row .concept-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── 详情面板 ─────────────────────────────────────── */
+.detail-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-section:last-child { border-bottom: none; }
+
+.detail-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: var(--text-pri);
+  line-height: 1.6;
+}
+
+.attr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attr-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--bg-card);
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.attr-item .attr-name { color: var(--text-sec); flex-shrink: 0; min-width: 80px; }
+.attr-item .attr-value { color: var(--text-pri); flex: 1; }
+.attr-item .attr-type-tag {
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.relation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin: 2px;
+  transition: all .12s;
+}
+
+.relation-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── 工具栏 ─────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
+.toolbar-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+/* ── 图谱视图 ─────────────────────────────────────── */
+#graph-view {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: none;
+}
+
+#graph-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.graph-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+/* ── 仪表盘 ─────────────────────────────────────── */
+#dashboard-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: none;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: var(--text-sec);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sec);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.element-type-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.type-bar-label {
+  width: 60px;
+  font-size: 12px;
+  color: var(--text-sec);
+  text-align: right;
+}
+
+.type-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-card);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.type-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .5s;
+}
+
+.type-bar-count {
+  width: 30px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── 模态框 ─────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.modal-close {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  transition: color .12s;
+}
+
+.modal-close:hover { color: var(--text-pri); }
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── 表单 ─────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 12px;
+  color: var(--text-sec);
+  font-weight: 500;
+}
+
+.form-label .required { color: var(--danger); }
+
+.form-control {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-pri);
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+
+.form-control:focus { border-color: var(--accent); }
+.form-control::placeholder { color: var(--text-muted); }
+
+textarea.form-control { min-height: 80px; resize: vertical; font-family: inherit; }
+select.form-control { cursor: pointer; }
+
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+
+/* ── 通知 toast ─────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-pri);
+  box-shadow: var(--shadow);
+  animation: slideIn .2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 300px;
+}
+
+.toast.success { border-left: 3px solid var(--accent3); }
+.toast.error { border-left: 3px solid var(--danger); }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* ── 要素类型颜色标签 ─────────────────────────────── */
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-subject   { background: rgba(79,142,247,.15);  color: var(--color-subject);   }
+.badge-behavior  { background: rgba(124,92,191,.15);  color: var(--color-behavior);  }
+.badge-object    { background: rgba(46,169,139,.15);  color: var(--color-object);    }
+.badge-time      { background: rgba(224,153,74,.15);  color: var(--color-time);      }
+.badge-space     { background: rgba(224,82,82,.15);   color: var(--color-space);     }
+.badge-problem   { background: rgba(192,57,43,.15);   color: var(--color-problem);   }
+.badge-goal      { background: rgba(39,174,96,.15);   color: var(--color-goal);      }
+.badge-indicator { background: rgba(142,68,173,.15);  color: var(--color-indicator); }
+.badge-domain    { background: rgba(41,128,185,.15);  color: var(--color-domain);    }
+
+/* ── 空状态 ─────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-state .empty-icon { font-size: 40px; opacity: .5; }
+.empty-state .empty-title { font-size: 14px; color: var(--text-sec); }
+.empty-state .empty-desc { font-size: 12px; line-height: 1.6; }
+
+/* ── 分类标签条 ─────────────────────────────────── */
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.filter-tab {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all .12s;
+  color: var(--text-sec);
+  background: var(--bg-card);
+}
+
+.filter-tab:hover { border-color: var(--border); }
+.filter-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* 搜索结果 */
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 200;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background .1s;
+}
+
+.search-result-item:hover { background: var(--bg-hover); }
+
+.two-systems-diagram {
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.system-box {
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.active-system { border: 1px solid rgba(79,142,247,.4); background: rgba(79,142,247,.05); }
+.object-system { border: 1px solid rgba(46,169,139,.4); background: rgba(46,169,139,.05); }
+
+.system-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.five-elements {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.element-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.element-pill:hover { opacity: .8; transform: translateY(-1px); }
+
+/* ── 问题层级颜色 ─────────────────────────────────── */
+.level-phenomenon { color: var(--warn); }
+.level-root { color: var(--accent2); }
+.level-crux { color: var(--danger); }
+
+/* ── 加载指示 ─────────────────────────────────────── */
+.loading-mask {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+
+/* ── 工具提示 ─────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 500;
+  max-width: 200px;
+  box-shadow: var(--shadow);
+}
+</style>
+</head>
+<body>
+
+<!-- ── 顶部导航 ────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon">🧠</div>
+    知识本体管理工具
+  </div>
+  <nav class="topbar-tabs">
+    <button class="topbar-tab active" onclick="switchView('ontology')">本体浏览</button>
+    <button class="topbar-tab" onclick="switchView('graph')">关系图谱</button>
+    <button class="topbar-tab" onclick="switchView('problems')">问题目标</button>
+    <button class="topbar-tab" onclick="switchView('dashboard')">总览</button>
+  </nav>
+  <div class="topbar-spacer"></div>
+  <div class="search-box" style="position:relative">
+    <span style="color:var(--text-muted);font-size:13px">🔍</span>
+    <input id="global-search" type="text" placeholder="搜索概念、领域…" oninput="doSearch(this.value)" autocomplete="off">
+    <div id="search-dropdown" class="search-results" style="display:none"></div>
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ 导出</button>
+  <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+    ⬆ 导入
+    <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+  </label>
+</header>
+
+<!-- ── 主工作区 ──────────────────────────────────────────────── -->
+<main class="workspace">
+
+  <!-- ── 左面板：领域树 ─────────────────────────────── -->
+  <aside class="panel-left" id="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">领域 / 类别</span>
+      <button class="btn btn-ghost btn-sm" onclick="openDomainModal()">+ 新建</button>
+    </div>
+
+    <!-- 两系统简图 -->
+    <div style="padding:8px 10px;border-bottom:1px solid var(--border)">
+      <div class="two-systems-diagram" style="padding:10px">
+        <div class="system-box active-system">
+          <div class="system-title" style="color:var(--accent)">🔵 主动系统</div>
+          <div class="five-elements">
+            <span class="element-pill badge-subject" onclick="filterByType('subject')">主体</span>
+            <span class="element-pill badge-behavior" onclick="filterByType('behavior')">行为</span>
+            <span class="element-pill badge-object" onclick="filterByType('object')">客体</span>
+            <span class="element-pill badge-time" onclick="filterByType('time')">时间</span>
+            <span class="element-pill badge-space" onclick="filterByType('space')">空间</span>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">⟷ 问题驱动 / 目标约束 ⟷</div>
+        <div class="system-box object-system">
+          <div class="system-title" style="color:var(--accent3)">🟢 对象系统</div>
+          <div class="five-elements">
+            <span class="element-pill badge-subject" onclick="filterByType('subject')">主体</span>
+            <span class="element-pill badge-behavior" onclick="filterByType('behavior')">行为</span>
+            <span class="element-pill badge-object" onclick="filterByType('object')">客体</span>
+            <span class="element-pill badge-time" onclick="filterByType('time')">时间</span>
+            <span class="element-pill badge-space" onclick="filterByType('space')">空间</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body" id="domain-tree">
+      <div class="loading-mask"><span class="spin">⟳</span> &nbsp;加载中…</div>
+    </div>
+  </aside>
+
+  <!-- ── 中间面板：本体列表 / 图谱 ─────────────────── -->
+  <section class="panel-main">
+
+    <!-- 本体列表视图 -->
+    <div id="ontology-view" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div class="toolbar">
+        <span class="toolbar-info" id="list-info">选择左侧领域来浏览概念</span>
+        <button class="btn btn-primary btn-sm" onclick="openConceptModal()">+ 新建概念</button>
+        <button class="btn btn-ghost btn-sm" onclick="openRelationModal()">🔗 添加关系</button>
+      </div>
+      <div class="filter-tabs" id="type-filter-tabs">
+        <span class="filter-tab active" onclick="setTypeFilter('', this)">全部</span>
+        <span class="filter-tab" data-type="subject"   onclick="setTypeFilter('subject',   this)">主体</span>
+        <span class="filter-tab" data-type="behavior"  onclick="setTypeFilter('behavior',  this)">行为</span>
+        <span class="filter-tab" data-type="object"    onclick="setTypeFilter('object',    this)">客体</span>
+        <span class="filter-tab" data-type="time"      onclick="setTypeFilter('time',      this)">时间</span>
+        <span class="filter-tab" data-type="space"     onclick="setTypeFilter('space',     this)">空间</span>
+        <span class="filter-tab" data-type="problem"   onclick="setTypeFilter('problem',   this)">问题</span>
+        <span class="filter-tab" data-type="goal"      onclick="setTypeFilter('goal',      this)">目标</span>
+        <span class="filter-tab" data-type="indicator" onclick="setTypeFilter('indicator', this)">指标</span>
+      </div>
+      <div class="panel-body" id="concept-list">
+        <div class="empty-state">
+          <div class="empty-icon">📚</div>
+          <div class="empty-title">暂无概念</div>
+          <div class="empty-desc">从左侧选择领域，或点击<br>「新建概念」开始构建知识本体</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图谱视图 -->
+    <div id="graph-view">
+      <div class="graph-toolbar">
+        <button class="btn btn-ghost btn-sm" onclick="resetZoom()">⊕ 重置视图</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadGraph()">🔄 刷新</button>
+      </div>
+      <svg id="graph-svg"></svg>
+      <div class="tooltip" id="graph-tooltip" style="display:none"></div>
+    </div>
+
+    <!-- 仪表盘视图 -->
+    <div id="dashboard-view">
+      <!-- 由 JS 动态生成 -->
+    </div>
+
+    <!-- 问题目标视图 -->
+    <div id="problems-view" style="display:none;flex:1;overflow:hidden;flex-direction:column">
+      <div class="toolbar">
+        <span class="toolbar-info">问题（三层）与目标管理</span>
+        <button class="btn btn-primary btn-sm" onclick="openProblemModal()">+ 新建问题</button>
+        <button class="btn btn-ghost btn-sm" onclick="openGoalModal()">🎯 新建目标</button>
+      </div>
+      <div class="panel-body" id="problems-list" style="padding:16px">
+        <div class="loading-mask"><span class="spin">⟳</span></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── 右面板：详情 ──────────────────────────────── -->
+  <aside class="panel-right" id="right-panel">
+    <div class="panel-header">
+      <span class="panel-title" id="detail-panel-title">概念详情</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" id="edit-btn" onclick="editSelected()" style="display:none">✏ 编辑</button>
+        <button class="btn btn-danger btn-sm" id="delete-btn" onclick="deleteSelected()" style="display:none">🗑</button>
+      </div>
+    </div>
+    <div class="panel-body" id="detail-panel">
+      <div class="empty-state">
+        <div class="empty-icon">👆</div>
+        <div class="empty-title">点击概念查看详情</div>
+        <div class="empty-desc">选择列表中的概念查看其<br>属性、关系等详细信息</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ── 模态框区域 ──────────────────────────────────────────────── -->
+
+<!-- 概念 Modal -->
+<div class="modal-overlay" id="concept-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="concept-modal-title">新建概念</span>
+      <span class="modal-close" onclick="closeModal('concept-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="form-label">概念名称 <span class="required">*</span></label>
+          <input class="form-control" id="cf-name" placeholder="如：政务主体、审批行为…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">别名</label>
+          <input class="form-control" id="cf-alias" placeholder="可选">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">要素类型 <span class="required">*</span></label>
+          <select class="form-control" id="cf-element-type">
+            <option value="subject">主体</option>
+            <option value="behavior">行为</option>
+            <option value="object">客体</option>
+            <option value="time">时间</option>
+            <option value="space">空间</option>
+            <option value="problem">问题</option>
+            <option value="goal">目标</option>
+            <option value="indicator">指标</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">所属系统</label>
+          <select class="form-control" id="cf-system-role">
+            <option value="universal">通用</option>
+            <option value="active_system">主动系统</option>
+            <option value="object_system">对象系统</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">所属领域</label>
+        <select class="form-control" id="cf-domain-id">
+          <option value="">— 无 —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">定义</label>
+        <textarea class="form-control" id="cf-definition" placeholder="对该概念的明确定义…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <textarea class="form-control" id="cf-note" placeholder="补充说明…" style="min-height:60px"></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-sec)">
+          <input type="checkbox" id="cf-universal"> 属于通用知识本体
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('concept-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveConcept()">保存概念</button>
+    </div>
+  </div>
+</div>
+
+<!-- 属性 Modal -->
+<div class="modal-overlay" id="attr-modal">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <span class="modal-title">添加属性</span>
+      <span class="modal-close" onclick="closeModal('attr-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="form-label">属性名 <span class="required">*</span></label>
+          <input class="form-control" id="af-name" placeholder="如：行政级别">
+        </div>
+        <div class="form-group">
+          <label class="form-label">类型</label>
+          <select class="form-control" id="af-attr-type">
+            <option value="base">基础属性</option>
+            <option value="domain" selected>领域属性</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">属性值</label>
+        <input class="form-control" id="af-value" placeholder="属性的具体值（可选）">
+      </div>
+      <div class="form-group">
+        <label class="form-label">数据类型</label>
+        <select class="form-control" id="af-data-type">
+          <option value="string">文本</option>
+          <option value="number">数值</option>
+          <option value="date">日期</option>
+          <option value="boolean">布尔</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <input class="form-control" id="af-note" placeholder="可选">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('attr-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveAttr()">保存属性</button>
+    </div>
+  </div>
+</div>
+
+<!-- 关系 Modal -->
+<div class="modal-overlay" id="relation-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <span class="modal-title">添加关系</span>
+      <span class="modal-close" onclick="closeModal('relation-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">发起方概念 <span class="required">*</span></label>
+        <select class="form-control" id="rf-source-id">
+          <option value="">— 请选择 —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">关系类型 <span class="required">*</span></label>
+        <select class="form-control" id="rf-relation-type">
+          <option value="">— 请选择 —</option>
+          <option>分类</option><option>包含</option><option>实施</option>
+          <option>利用</option><option>在</option><option>确认</option>
+          <option>提出</option><option>制定</option><option>表现</option>
+          <option>解决</option><option>实现</option><option>依据</option>
+          <option>参考</option><option>输入</option><option>输出</option>
+          <option>集约</option><option>前置</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">目标方概念 <span class="required">*</span></label>
+        <select class="form-control" id="rf-target-id">
+          <option value="">— 请选择 —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">自定义标签</label>
+        <input class="form-control" id="rf-label" placeholder="可选，覆盖默认关系名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <input class="form-control" id="rf-note" placeholder="可选">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('relation-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveRelation()">保存关系</button>
+    </div>
+  </div>
+</div>
+
+<!-- 领域 Modal -->
+<div class="modal-overlay" id="domain-modal">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <span class="modal-title">新建领域</span>
+      <span class="modal-close" onclick="closeModal('domain-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">领域名称 <span class="required">*</span></label>
+        <input class="form-control" id="df-name" placeholder="如：政务领域、教育领域…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述</label>
+        <textarea class="form-control" id="df-description" placeholder="该领域的说明…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('domain-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveDomain()">保存领域</button>
+    </div>
+  </div>
+</div>
+
+<!-- 问题 Modal -->
+<div class="modal-overlay" id="problem-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <span class="modal-title">新建问题</span>
+      <span class="modal-close" onclick="closeModal('problem-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">问题名称 <span class="required">*</span></label>
+        <input class="form-control" id="pf-name" placeholder="描述具体问题">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">问题层级 <span class="required">*</span></label>
+          <select class="form-control" id="pf-level">
+            <option value="phenomenon">表象性问题</option>
+            <option value="root">根源性问题</option>
+            <option value="crux">症结性问题</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">所属领域</label>
+          <select class="form-control" id="pf-domain-id">
+            <option value="">— 无 —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述</label>
+        <textarea class="form-control" id="pf-description" placeholder="问题的详细描述…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('problem-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveProblem()">保存问题</button>
+    </div>
+  </div>
+</div>
+
+<!-- 目标 Modal -->
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <span class="modal-title">新建目标</span>
+      <span class="modal-close" onclick="closeModal('goal-modal')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">目标名称 <span class="required">*</span></label>
+        <input class="form-control" id="gf-name" placeholder="描述具体目标">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">解决的问题</label>
+          <select class="form-control" id="gf-problem-id">
+            <option value="">— 无 —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">所属领域</label>
+          <select class="form-control" id="gf-domain-id">
+            <option value="">— 无 —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">指标（量化）</label>
+        <input class="form-control" id="gf-indicator" placeholder="如：审批时效 ≤ 3 个工作日">
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述</label>
+        <textarea class="form-control" id="gf-description" placeholder="目标的详细描述…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('goal-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveGoal()">保存目标</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── 主逻辑 ──────────────────────────────────────────────── -->
+<script>
+const API = '/api';
+
+// ─── 全局状态 ─────────────────────────────────────────────
+const state = {
+  domains: [],
+  concepts: [],
+  selectedDomainId: null,
+  selectedConcept: null,
+  typeFilter: '',
+  editingConceptId: null,
+  currentView: 'ontology',
+};
+
+// ─── 工具函数 ─────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || '请求失败');
+  return json;
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// 五要素中文映射
+const TYPE_LABELS = {
+  subject: '主体', behavior: '行为', object: '客体',
+  time: '时间', space: '空间', problem: '问题',
+  goal: '目标', indicator: '指标', domain: '领域'
+};
+
+const LEVEL_LABELS = {
+  phenomenon: '表象', root: '根源', crux: '症结'
+};
+
+const SYSTEM_LABELS = {
+  active_system: '主动系统', object_system: '对象系统', universal: '通用'
+};
+
+function typeBadge(t) {
+  return `<span class="badge badge-${t}">${TYPE_LABELS[t] || t}</span>`;
+}
+
+// ─── 视图切换 ─────────────────────────────────────────────
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('.topbar-tab').forEach((t, i) => {
+    const views = ['ontology', 'graph', 'problems', 'dashboard'];
+    t.classList.toggle('active', views[i] === view);
+  });
+
+  document.getElementById('ontology-view').style.display = view === 'ontology' ? 'flex' : 'none';
+  document.getElementById('graph-view').style.display = view === 'graph' ? 'block' : 'none';
+  document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'block' : 'none';
+  const pv = document.getElementById('problems-view');
+  pv.style.display = view === 'problems' ? 'flex' : 'none';
+
+  if (view === 'graph') loadGraph();
+  if (view === 'dashboard') loadDashboard();
+  if (view === 'problems') loadProblems();
+}
+
+// ─── 领域树 ───────────────────────────────────────────────
+async function loadDomains() {
+  const { data } = await api('/domains');
+  state.domains = data;
+  renderDomainTree();
+  fillDomainSelects();
+}
+
+function renderDomainTree() {
+  const el = document.getElementById('domain-tree');
+  if (!state.domains.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">暂无领域</div></div>';
+    return;
+  }
+  el.innerHTML = state.domains.map(d => `
+    <div class="tree-item ${state.selectedDomainId === d.id ? 'active' : ''}"
+         onclick="selectDomain('${d.id}')">
+      <div class="item-icon" style="background:rgba(41,128,185,.2);color:var(--color-domain)">📂</div>
+      <span style="flex:1">${d.name}</span>
+    </div>
+  `).join('') + `
+    <div class="tree-item" onclick="filterByType('');selectDomain(null)" style="margin-top:4px">
+      <div class="item-icon" style="background:rgba(79,142,247,.1);color:var(--accent)">🌐</div>
+      <span>全部概念</span>
+    </div>
+  `;
+}
+
+function fillDomainSelects() {
+  const opts = state.domains.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  ['cf-domain-id', 'pf-domain-id', 'gf-domain-id'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— 无 —</option>' + opts;
+  });
+}
+
+async function selectDomain(id) {
+  state.selectedDomainId = id;
+  renderDomainTree();
+  loadConcepts();
+}
+
+// ─── 概念列表 ─────────────────────────────────────────────
+async function loadConcepts() {
+  const params = new URLSearchParams();
+  if (state.selectedDomainId) params.set('domain_id', state.selectedDomainId);
+  if (state.typeFilter) params.set('element_type', state.typeFilter);
+
+  const { data } = await api(`/concepts?${params}`);
+  state.concepts = data;
+  renderConceptList();
+  fillConceptSelects();
+}
+
+function renderConceptList() {
+  const el = document.getElementById('concept-list');
+  const info = document.getElementById('list-info');
+  info.textContent = `共 ${state.concepts.length} 个概念`;
+
+  if (!state.concepts.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">暂无概念</div>
+      <div class="empty-desc">点击工具栏「新建概念」</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="concept-list">
+    ${state.concepts.map(c => `
+      <div class="concept-row ${state.selectedConcept?.id === c.id ? 'selected' : ''}"
+           onclick="selectConcept('${c.id}')">
+        ${typeBadge(c.element_type)}
+        <span class="concept-name">${c.name}</span>
+        ${c.alias ? `<span class="concept-meta">${c.alias}</span>` : ''}
+        <span class="concept-meta">${c.relation_count > 0 ? `🔗${c.relation_count}` : ''}</span>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function fillConceptSelects() {
+  const opts = state.concepts.map(c =>
+    `<option value="${c.id}">[${TYPE_LABELS[c.element_type]}] ${c.name}</option>`
+  ).join('');
+  ['rf-source-id', 'rf-target-id'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— 请选择 —</option>' + opts;
+  });
+}
+
+function filterByType(type) {
+  state.typeFilter = type;
+  // 更新 filter tab 状态
+  document.querySelectorAll('.filter-tab').forEach(t => {
+    t.classList.toggle('active', (t.dataset.type || '') === type);
+  });
+  loadConcepts();
+}
+
+function setTypeFilter(type, el) {
+  filterByType(type);
+}
+
+// ─── 概念详情 ─────────────────────────────────────────────
+async function selectConcept(id) {
+  const { data } = await api(`/concepts/${id}`);
+  state.selectedConcept = data;
+  renderConceptList(); // 更新选中态
+  renderDetail(data);
+}
+
+function renderDetail(c) {
+  document.getElementById('detail-panel-title').textContent = c.name;
+  document.getElementById('edit-btn').style.display = 'inline-flex';
+  document.getElementById('delete-btn').style.display = 'inline-flex';
+
+  const panel = document.getElementById('detail-panel');
+  panel.innerHTML = `
+    <div class="detail-section">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        ${typeBadge(c.element_type)}
+        ${c.system_role ? `<span style="font-size:11px;color:var(--text-muted)">${SYSTEM_LABELS[c.system_role] || c.system_role}</span>` : ''}
+        ${c.is_universal ? '<span style="font-size:11px;color:var(--accent3)">🌐 通用本体</span>' : ''}
+      </div>
+      ${c.alias ? `<div style="font-size:12px;color:var(--text-sec);margin-bottom:4px">别名：${c.alias}</div>` : ''}
+      ${c.domain_name ? `<div style="font-size:12px;color:var(--text-muted)">领域：${c.domain_name}</div>` : ''}
+    </div>
+
+    ${c.definition ? `
+    <div class="detail-section">
+      <div class="detail-label">定义</div>
+      <div class="detail-value">${c.definition}</div>
+    </div>` : ''}
+
+    ${c.note ? `
+    <div class="detail-section">
+      <div class="detail-label">备注</div>
+      <div class="detail-value" style="color:var(--text-sec)">${c.note}</div>
+    </div>` : ''}
+
+    <div class="detail-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="detail-label">属性（${c.attributes.length}）</div>
+        <button class="btn btn-ghost btn-sm" onclick="openAttrModal('${c.id}')">+ 添加</button>
+      </div>
+      ${c.attributes.length ? `
+        <div class="attr-list">
+          ${c.attributes.map(a => `
+            <div class="attr-item">
+              <span class="attr-name">${a.name}</span>
+              <span class="attr-value">${a.value || '<em style="color:var(--text-muted)">—</em>'}</span>
+              <span class="attr-type-tag">${a.attr_type === 'base' ? '基础' : '领域'}</span>
+              <span onclick="deleteAttr('${c.id}','${a.id}')" style="cursor:pointer;color:var(--text-muted);font-size:12px;margin-left:4px">✕</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div style="font-size:12px;color:var(--text-muted)">暂无属性</div>`}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label" style="margin-bottom:8px">出向关系（${c.relations_out.length}）</div>
+      ${c.relations_out.map(r => `
+        <div class="relation-chip" onclick="selectConcept('${r.target_id}')">
+          <span style="color:var(--accent)">${r.relation_type}</span>
+          <span>→</span>
+          <span>${r.target_name}</span>
+          ${typeBadge(r.target_type)}
+          <span onclick="event.stopPropagation();deleteRelation('${r.id}','${c.id}')" style="color:var(--text-muted);margin-left:4px">✕</span>
+        </div>
+      `).join('') || '<span style="font-size:12px;color:var(--text-muted)">无</span>'}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label" style="margin-bottom:8px">入向关系（${c.relations_in.length}）</div>
+      ${c.relations_in.map(r => `
+        <div class="relation-chip" onclick="selectConcept('${r.source_id}')">
+          ${typeBadge(r.source_type)}
+          <span>${r.source_name}</span>
+          <span>→</span>
+          <span style="color:var(--accent)">${r.relation_type}</span>
+          <span onclick="event.stopPropagation();deleteRelation('${r.id}','${c.id}')" style="color:var(--text-muted);margin-left:4px">✕</span>
+        </div>
+      `).join('') || '<span style="font-size:12px;color:var(--text-muted)">无</span>'}
+    </div>
+  `;
+}
+
+// ─── 编辑 / 删除 ──────────────────────────────────────────
+function editSelected() {
+  if (!state.selectedConcept) return;
+  const c = state.selectedConcept;
+  state.editingConceptId = c.id;
+  document.getElementById('concept-modal-title').textContent = '编辑概念';
+  document.getElementById('cf-name').value = c.name;
+  document.getElementById('cf-alias').value = c.alias || '';
+  document.getElementById('cf-element-type').value = c.element_type;
+  document.getElementById('cf-system-role').value = c.system_role || 'universal';
+  document.getElementById('cf-domain-id').value = c.domain_id || '';
+  document.getElementById('cf-definition').value = c.definition || '';
+  document.getElementById('cf-note').value = c.note || '';
+  document.getElementById('cf-universal').checked = !!c.is_universal;
+  openModal('concept-modal');
+}
+
+async function deleteSelected() {
+  if (!state.selectedConcept) return;
+  if (!confirm(`确认删除概念「${state.selectedConcept.name}」？\n关联的属性和关系也将删除。`)) return;
+  await api(`/concepts/${state.selectedConcept.id}`, { method: 'DELETE' });
+  toast(`已删除「${state.selectedConcept.name}」`);
+  state.selectedConcept = null;
+  document.getElementById('detail-panel').innerHTML = '<div class="empty-state"><div class="empty-title">已删除</div></div>';
+  document.getElementById('edit-btn').style.display = 'none';
+  document.getElementById('delete-btn').style.display = 'none';
+  loadConcepts();
+}
+
+async function deleteAttr(conceptId, attrId) {
+  await api(`/concepts/${conceptId}/attributes/${attrId}`, { method: 'DELETE' });
+  selectConcept(conceptId);
+}
+
+async function deleteRelation(relId, conceptId) {
+  await api(`/relations/${relId}`, { method: 'DELETE' });
+  toast('关系已删除');
+  selectConcept(conceptId);
+  loadConcepts();
+}
+
+// ─── 新建/编辑概念 Modal ───────────────────────────────────
+function openConceptModal() {
+  state.editingConceptId = null;
+  document.getElementById('concept-modal-title').textContent = '新建概念';
+  ['cf-name','cf-alias','cf-definition','cf-note'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('cf-element-type').value = 'subject';
+  document.getElementById('cf-system-role').value = 'universal';
+  document.getElementById('cf-domain-id').value = state.selectedDomainId || '';
+  document.getElementById('cf-universal').checked = false;
+  openModal('concept-modal');
+}
+
+async function saveConcept() {
+  const body = {
+    name: document.getElementById('cf-name').value.trim(),
+    alias: document.getElementById('cf-alias').value.trim(),
+    element_type: document.getElementById('cf-element-type').value,
+    system_role: document.getElementById('cf-system-role').value,
+    domain_id: document.getElementById('cf-domain-id').value || null,
+    definition: document.getElementById('cf-definition').value.trim(),
+    note: document.getElementById('cf-note').value.trim(),
+    is_universal: document.getElementById('cf-universal').checked,
+  };
+  if (!body.name) return toast('名称不能为空', 'error');
+
+  try {
+    if (state.editingConceptId) {
+      await api(`/concepts/${state.editingConceptId}`, { method: 'PUT', body });
+      toast('概念已更新');
+    } else {
+      await api('/concepts', { method: 'POST', body });
+      toast('概念已创建');
+    }
+    closeModal('concept-modal');
+    loadConcepts();
+    if (state.editingConceptId) selectConcept(state.editingConceptId);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── 属性 Modal ───────────────────────────────────────────
+let _attrConceptId = null;
+
+function openAttrModal(conceptId) {
+  _attrConceptId = conceptId;
+  ['af-name','af-value','af-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('af-attr-type').value = 'domain';
+  document.getElementById('af-data-type').value = 'string';
+  openModal('attr-modal');
+}
+
+async function saveAttr() {
+  const body = {
+    name: document.getElementById('af-name').value.trim(),
+    value: document.getElementById('af-value').value.trim(),
+    attr_type: document.getElementById('af-attr-type').value,
+    data_type: document.getElementById('af-data-type').value,
+    note: document.getElementById('af-note').value.trim(),
+  };
+  if (!body.name) return toast('属性名称不能为空', 'error');
+  try {
+    await api(`/concepts/${_attrConceptId}/attributes`, { method: 'POST', body });
+    toast('属性已添加');
+    closeModal('attr-modal');
+    selectConcept(_attrConceptId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── 关系 Modal ───────────────────────────────────────────
+function openRelationModal() {
+  ['rf-label','rf-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('rf-relation-type').value = '';
+  if (state.selectedConcept) {
+    document.getElementById('rf-source-id').value = state.selectedConcept.id;
+  }
+  openModal('relation-modal');
+}
+
+async function saveRelation() {
+  const body = {
+    source_id: document.getElementById('rf-source-id').value,
+    target_id: document.getElementById('rf-target-id').value,
+    relation_type: document.getElementById('rf-relation-type').value,
+    label: document.getElementById('rf-label').value.trim(),
+    note: document.getElementById('rf-note').value.trim(),
+    domain_id: state.selectedDomainId,
+  };
+  if (!body.source_id || !body.target_id || !body.relation_type) {
+    return toast('请填写完整的关系信息', 'error');
+  }
+  try {
+    await api('/relations', { method: 'POST', body });
+    toast('关系已添加');
+    closeModal('relation-modal');
+    if (state.selectedConcept) selectConcept(state.selectedConcept.id);
+    loadConcepts();
+    if (state.currentView === 'graph') loadGraph();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── 领域 Modal ───────────────────────────────────────────
+function openDomainModal() {
+  document.getElementById('df-name').value = '';
+  document.getElementById('df-description').value = '';
+  openModal('domain-modal');
+}
+
+async function saveDomain() {
+  const body = {
+    name: document.getElementById('df-name').value.trim(),
+    description: document.getElementById('df-description').value.trim(),
+  };
+  if (!body.name) return toast('领域名称不能为空', 'error');
+  try {
+    await api('/domains', { method: 'POST', body });
+    toast('领域已创建');
+    closeModal('domain-modal');
+    loadDomains();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── 问题/目标 ────────────────────────────────────────────
+async function loadProblems() {
+  const [proRes, goalRes] = await Promise.all([
+    api('/problems'),
+    api('/problems/goals'),
+  ]);
+  renderProblems(proRes.data, goalRes.data);
+}
+
+function renderProblems(problems, goals) {
+  const el = document.getElementById('problems-list');
+  const levelOrder = { phenomenon: 0, root: 1, crux: 2 };
+  const sorted = [...problems].sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
+
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div class="section-title">🔴 问题层级（三层结构）</div>
+      ${sorted.length ? sorted.map(p => `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer"
+             onclick="showProblemDetail('${p.id}')">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="badge level-${p.level}" style="background:rgba(0,0,0,.2)">
+              ${LEVEL_LABELS[p.level] || p.level}
+            </span>
+            <span style="font-size:13px;font-weight:500">${p.name}</span>
+            ${p.domain_name ? `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${p.domain_name}</span>` : ''}
+          </div>
+          ${p.description ? `<div style="font-size:12px;color:var(--text-sec);line-height:1.5">${p.description}</div>` : ''}
+        </div>
+      `).join('') : '<div style="font-size:13px;color:var(--text-muted)">暂无问题</div>'}
+    </div>
+    <div>
+      <div class="section-title">🎯 目标</div>
+      ${goals.length ? goals.map(g => `
+        <div style="background:var(--bg-card);border:1px solid rgba(39,174,96,.3);border-radius:8px;padding:12px 14px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="color:var(--color-goal);font-size:13px;font-weight:500">🎯 ${g.name}</span>
+            ${g.domain_name ? `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${g.domain_name}</span>` : ''}
+          </div>
+          ${g.indicator ? `<div style="font-size:12px;color:var(--accent3)">指标：${g.indicator}</div>` : ''}
+          ${g.problem_name ? `<div style="font-size:12px;color:var(--text-muted)">解决：${g.problem_name}</div>` : ''}
+        </div>
+      `).join('') : '<div style="font-size:13px;color:var(--text-muted)">暂无目标</div>'}
+    </div>
+  `;
+}
+
+function openProblemModal() {
+  ['pf-name','pf-description'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pf-level').value = 'phenomenon';
+  document.getElementById('pf-domain-id').value = state.selectedDomainId || '';
+  openModal('problem-modal');
+}
+
+async function saveProblem() {
+  const body = {
+    name: document.getElementById('pf-name').value.trim(),
+    level: document.getElementById('pf-level').value,
+    description: document.getElementById('pf-description').value.trim(),
+    domain_id: document.getElementById('pf-domain-id').value || null,
+  };
+  if (!body.name || !body.level) return toast('名称和层级不能为空', 'error');
+  try {
+    await api('/problems', { method: 'POST', body });
+    toast('问题已创建');
+    closeModal('problem-modal');
+    loadProblems();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function openGoalModal() {
+  ['gf-name','gf-indicator','gf-description'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('gf-domain-id').value = state.selectedDomainId || '';
+  openModal('goal-modal');
+}
+
+async function saveGoal() {
+  const body = {
+    name: document.getElementById('gf-name').value.trim(),
+    indicator: document.getElementById('gf-indicator').value.trim(),
+    description: document.getElementById('gf-description').value.trim(),
+    problem_id: document.getElementById('gf-problem-id').value || null,
+    domain_id: document.getElementById('gf-domain-id').value || null,
+  };
+  if (!body.name) return toast('目标名称不能为空', 'error');
+  try {
+    await api('/problems/goals', { method: 'POST', body });
+    toast('目标已创建');
+    closeModal('goal-modal');
+    loadProblems();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── D3 力导向图 ──────────────────────────────────────────
+let simulation, zoom_behavior;
+
+async function loadGraph() {
+  const params = state.selectedDomainId ? `?domain_id=${state.selectedDomainId}` : '';
+  const { nodes, edges } = await api(`/relations/graph${params}`);
+  renderGraph(nodes, edges);
+}
+
+function renderGraph(nodes, edges) {
+  const svg = d3.select('#graph-svg');
+  svg.selectAll('*').remove();
+
+  const container = document.getElementById('graph-view');
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+
+  const colorMap = {
+    subject: '#4f8ef7', behavior: '#7c5cbf', object: '#2ea98b',
+    time: '#e0994a', space: '#e05252', problem: '#c0392b',
+    goal: '#27ae60', indicator: '#8e44ad'
+  };
+
+  // 缩放行为
+  const g = svg.append('g');
+  zoom_behavior = d3.zoom().scaleExtent([.1, 3]).on('zoom', e => {
+    g.attr('transform', e.transform);
+  });
+  svg.call(zoom_behavior);
+
+  // 箭头标记
+  const defs = svg.append('defs');
+  Object.entries(colorMap).forEach(([type, color]) => {
+    defs.append('marker')
+      .attr('id', `arrow-${type}`)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 20)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('fill', color)
+      .attr('d', 'M0,-5L10,0L0,5');
+  });
+
+  // 力模拟
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(120))
+    .force('charge', d3.forceManyBody().strength(-300))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide(40));
+
+  // 边
+  const link = g.append('g').selectAll('line')
+    .data(edges).join('line')
+    .attr('stroke', d => colorMap[d.source.element_type] || '#4a5568')
+    .attr('stroke-width', 1.5)
+    .attr('stroke-opacity', .6)
+    .attr('marker-end', d => `url(#arrow-${d.source.element_type || 'subject'})`);
+
+  // 边标签
+  const linkLabel = g.append('g').selectAll('text')
+    .data(edges).join('text')
+    .attr('fill', '#8892b0')
+    .attr('font-size', 10)
+    .attr('text-anchor', 'middle')
+    .text(d => d.relation_type);
+
+  // 节点组
+  const node = g.append('g').selectAll('g')
+    .data(nodes).join('g')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+    )
+    .on('click', (e, d) => {
+      switchView('ontology');
+      setTimeout(() => selectConcept(d.id), 100);
+    });
+
+  node.append('circle')
+    .attr('r', d => d.is_universal ? 22 : 16)
+    .attr('fill', d => colorMap[d.element_type] || '#4a5568')
+    .attr('fill-opacity', .15)
+    .attr('stroke', d => colorMap[d.element_type] || '#4a5568')
+    .attr('stroke-width', d => d.is_universal ? 2.5 : 1.5);
+
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', '0.35em')
+    .attr('fill', '#e8eaf6')
+    .attr('font-size', d => d.name.length > 4 ? 10 : 12)
+    .text(d => d.name.length > 6 ? d.name.slice(0, 5) + '…' : d.name);
+
+  // Tooltip
+  const tooltip = document.getElementById('graph-tooltip');
+  node
+    .on('mouseover', (e, d) => {
+      tooltip.style.display = 'block';
+      tooltip.innerHTML = `<strong>${d.name}</strong><br>${TYPE_LABELS[d.element_type] || d.element_type}`;
+    })
+    .on('mousemove', e => {
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (e.clientY - rect.top + 12) + 'px';
+    })
+    .on('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2 - 4);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+}
+
+function resetZoom() {
+  d3.select('#graph-svg').transition().duration(500).call(
+    zoom_behavior.transform,
+    d3.zoomIdentity
+  );
+}
+
+// ─── 仪表盘 ───────────────────────────────────────────────
+async function loadDashboard() {
+  const { totals, by_element_type, by_system_role, recent_concepts } = await api('/stats');
+  const maxCount = Math.max(...by_element_type.map(t => t.n), 1);
+  const colorMap = {
+    subject: 'var(--color-subject)', behavior: 'var(--color-behavior)',
+    object: 'var(--color-object)', time: 'var(--color-time)',
+    space: 'var(--color-space)', problem: 'var(--color-problem)',
+    goal: 'var(--color-goal)', indicator: 'var(--color-indicator)'
+  };
+
+  document.getElementById('dashboard-view').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">${totals.concepts}</div><div class="stat-label">知识本体概念</div></div>
+      <div class="stat-card"><div class="stat-value">${totals.relations}</div><div class="stat-label">概念关系</div></div>
+      <div class="stat-card"><div class="stat-value">${totals.domains}</div><div class="stat-label">领域</div></div>
+      <div class="stat-card"><div class="stat-value">${totals.problems}</div><div class="stat-label">问题</div></div>
+      <div class="stat-card"><div class="stat-value">${totals.goals}</div><div class="stat-label">目标</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div class="section-title">五要素分布</div>
+        <div class="element-type-bars">
+          ${by_element_type.map(t => `
+            <div class="type-bar-row">
+              <div class="type-bar-label">${TYPE_LABELS[t.element_type] || t.element_type}</div>
+              <div class="type-bar-track">
+                <div class="type-bar-fill" style="width:${Math.round(t.n/maxCount*100)}%;background:${colorMap[t.element_type]||'#4a5568'}"></div>
+              </div>
+              <div class="type-bar-count">${t.n}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div class="section-title">最近创建的概念</div>
+        ${recent_concepts.map(c => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer"
+               onclick="switchView('ontology');setTimeout(()=>selectConcept('${c.id}'),100)">
+            ${typeBadge(c.element_type)}
+            <span style="font-size:13px;flex:1">${c.name}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${c.domain_name || ''}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div style="margin-top:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
+      <div class="section-title">方法论说明</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;color:var(--text-sec);line-height:1.8">
+        <div>
+          <div><strong style="color:var(--text-pri)">两系统</strong>：主动系统 / 对象系统</div>
+          <div><strong style="color:var(--text-pri)">五要素</strong>：主体、行为、客体、时间、空间</div>
+          <div><strong style="color:var(--text-pri)">问题驱动</strong>：对象系统诉求与现状的差异</div>
+          <div><strong style="color:var(--text-pri)">目标约束</strong>：主动系统为解决问题而设定目标</div>
+        </div>
+        <div>
+          <div><strong style="color:var(--text-pri)">三层问题</strong>：表象 → 根源 → 症结</div>
+          <div><strong style="color:var(--text-pri)">属性</strong>：基础属性（不变）+ 领域属性（领域特定）</div>
+          <div><strong style="color:var(--text-pri)">关系</strong>：17种标准关系类型</div>
+          <div><strong style="color:var(--text-pri)">指标</strong>：用数量值刻画问题与目标</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── 全局搜索 ─────────────────────────────────────────────
+let searchTimer = null;
+async function doSearch(q) {
+  clearTimeout(searchTimer);
+  const dd = document.getElementById('search-dropdown');
+  if (!q.trim()) { dd.style.display = 'none'; return; }
+  searchTimer = setTimeout(async () => {
+    const { data } = await api(`/search?q=${encodeURIComponent(q)}`);
+    if (!data.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = data.map(item => `
+      <div class="search-result-item" onclick="handleSearchClick('${item.id}','${item.type}')">
+        ${typeBadge(item.subtype || item.type)}
+        <span>${item.name}</span>
+        ${item.description ? `<span style="font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.description.slice(0,40)}</span>` : ''}
+      </div>
+    `).join('');
+    dd.style.display = 'block';
+  }, 300);
+}
+
+function handleSearchClick(id, type) {
+  document.getElementById('search-dropdown').style.display = 'none';
+  document.getElementById('global-search').value = '';
+  if (type === 'concept') {
+    switchView('ontology');
+    setTimeout(() => selectConcept(id), 100);
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-box')) {
+    document.getElementById('search-dropdown').style.display = 'none';
+  }
+});
+
+// ─── 导出/导入 ───────────────────────────────────────────
+async function exportData() {
+  const params = state.selectedDomainId ? `?domain_id=${state.selectedDomainId}` : '';
+  const data = await api(`/export${params}`);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ontology-${Date.now()}.json`;
+  a.click();
+  toast('导出成功');
+}
+
+async function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const data = JSON.parse(text);
+    const { imported } = await api('/import', { method: 'POST', body: data });
+    toast(`导入完成：概念 ${imported.concepts}，关系 ${imported.relations}，领域 ${imported.domains}`);
+    loadDomains();
+    loadConcepts();
+  } catch(err) {
+    toast('导入失败: ' + err.message, 'error');
+  }
+  e.target.value = '';
+}
+
+// ─── 初始化 ───────────────────────────────────────────────
+(async function init() {
+  await loadDomains();
+  await loadConcepts();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# 依赖
+node_modules/
+
+# 数据库文件（本地数据，不上传）
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
