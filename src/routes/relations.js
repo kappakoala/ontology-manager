@@ -112,7 +112,10 @@ router.get('/graph', (req, res) => {
     WHERE r.source_id IN (${placeholders}) AND r.target_id IN (${placeholders})
   `).all(...conceptIds, ...conceptIds);
 
-  res.json({ nodes: concepts, edges: relations });
+  // 映射为 D3 forceLink 所需的 source/target 格式
+  const edges = relations.map(r => ({ ...r, source: r.source_id, target: r.target_id }));
+
+  res.json({ nodes: concepts, edges });
 });
 
 module.exports = router;

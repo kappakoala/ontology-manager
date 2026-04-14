@@ -374,11 +374,13 @@ body {
   position: relative;
   overflow: hidden;
   display: none;
+  flex-direction: column;
 }
 
 #graph-svg {
   width: 100%;
   height: 100%;
+  flex: 1;
 }
 
 .graph-toolbar {
@@ -860,7 +862,7 @@ select.form-control { cursor: pointer; }
     </div>
 
     <!-- 图谱视图 -->
-    <div id="graph-view">
+    <div id="graph-view" style="display:none;flex:1;flex-direction:column;height:100%;overflow:hidden">
       <div class="graph-toolbar">
         <button class="btn btn-ghost btn-sm" onclick="resetZoom()">⊕ 重置视图</button>
         <button class="btn btn-ghost btn-sm" onclick="loadGraph()">🔄 刷新</button>
@@ -1246,12 +1248,15 @@ function switchView(view) {
   });
 
   document.getElementById('ontology-view').style.display = view === 'ontology' ? 'flex' : 'none';
-  document.getElementById('graph-view').style.display = view === 'graph' ? 'block' : 'none';
+  document.getElementById('graph-view').style.display = view === 'graph' ? 'flex' : 'none';
   document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'block' : 'none';
   const pv = document.getElementById('problems-view');
   pv.style.display = view === 'problems' ? 'flex' : 'none';
 
-  if (view === 'graph') loadGraph();
+  if (view === 'graph') {
+    // 延迟执行，确保 DOM 已经渲染
+    setTimeout(loadGraph, 100);
+  }
   if (view === 'dashboard') loadDashboard();
   if (view === 'problems') loadProblems();
 }
@@ -1714,8 +1719,17 @@ function renderGraph(nodes, edges) {
   svg.selectAll('*').remove();
 
   const container = document.getElementById('graph-view');
-  const W = container.clientWidth;
-  const H = container.clientHeight;
+  // 强制刷新布局以获取正确的宽高
+  container.style.visibility = 'hidden';
+  container.style.display = 'flex';
+  void container.offsetWidth;
+  container.style.visibility = '';
+
+  const W = container.clientWidth || 800;
+  const H = container.clientHeight || 600;
+
+  // 设置SVG显式宽高，防止display:none时宽高为0
+  svg.attr('width', W).attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
 
   const colorMap = {
     subject: '#4f8ef7', behavior: '#7c5cbf', object: '#2ea98b',
@@ -1756,11 +1770,16 @@ function renderGraph(nodes, edges) {
   // 边
   const link = g.append('g').selectAll('line')
     .data(edges).join('line')
-    .attr('stroke', d => colorMap[d.source.element_type] || '#4a5568')
+    .attr('stroke', d => {
+      const sourceNode = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source_id);
+      return colorMap[sourceNode?.element_type] || '#4a5568';
+    })
     .attr('stroke-width', 1.5)
     .attr('stroke-opacity', .6)
-    .attr('marker-end', d => `url(#arrow-${d.source.element_type || 'subject'})`);
-
+    .attr('marker-end', d => {
+      const sourceNode = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source_id);
+      return `url(#arrow-${sourceNode?.element_type || 'subject'})`;
+    });
   // 边标签
   const linkLabel = g.append('g').selectAll('text')
     .data(edges).join('text')
@@ -1793,8 +1812,8 @@ function renderGraph(nodes, edges) {
     .attr('text-anchor', 'middle')
     .attr('dy', '0.35em')
     .attr('fill', '#e8eaf6')
-    .attr('font-size', d => d.name.length > 4 ? 10 : 12)
-    .text(d => d.name.length > 6 ? d.name.slice(0, 5) + '…' : d.name);
+    .attr('font-size', d => d.name.length > 6 ? 10 : (d.name.length > 4 ? 11 : 12))
+    .text(d => d.name.length > 8 ? d.name.slice(0, 7) + '…' : d.name);
 
   // Tooltip
   const tooltip = document.getElementById('graph-tooltip');
@@ -1959,6 +1978,14 @@ async function importData(e) {
   }
   e.target.value = '';
 }
+
+// ─── 窗口resize重绘图谱 ───────────────────────────────────
+window.addEventListener('resize', () => {
+  if (state.currentView === 'graph') {
+    clearTimeout(window._graphResizeTimer);
+    window._graphResizeTimer = setTimeout(loadGraph, 200);
+  }
+});
 
 // ─── 初始化 ───────────────────────────────────────────────
 (async function init() {
