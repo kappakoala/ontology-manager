@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>知识本体管理工具 · 方法论v3.7</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="/mammoth.browser.min.js"></script>
 <style>
 :root {
   --bg-base:#0f1117; --bg-panel:#161b27; --bg-card:#1e2535; --bg-hover:#252e44;
@@ -1214,10 +1213,9 @@ async function loadDashboard(){
 //  本体建模：五步骤
 // ══════════════════════════════════════════════
 function resetModeling(){
-  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0,selectedFile:null,preloadedContent:null};
+  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0,selectedFile:null};
   el('file-input').value=''; el('paste-text').value=''; el('upload-status').textContent='';
   el('file-name-badge').style.display='none';
-  // 重置预览页元素
   el('doc-filename').textContent='—';
   el('doc-subtitle').textContent='请上传或粘贴文档内容';
   el('doc-icon').textContent='📄';
@@ -1253,66 +1251,10 @@ function handleFileDrop(event){
 async function handleFileSelect(file){
   if(!file) return;
   state.modeling.selectedFile = file;
-  state.modeling.preloadedContent = null;
-  const ext = file.name.split('.').pop().toLowerCase();
   const badge = el('file-name-badge');
-  el('upload-status').textContent = `正在读取 ${file.name}…`;
-
-  if (file.size > 10 * 1024 * 1024) {
-    toast('文件超过 10MB，请压缩后重试', 'error');
-    el('upload-status').textContent = '';
-    return;
-  }
-
-  try {
-    let content = '';
-    if (ext === 'docx') {
-      if (typeof mammoth !== 'undefined' && typeof mammoth.convertToMarkdown === 'function') {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const result = await mammoth.convertToMarkdown({ arrayBuffer });
-          content = result.value || '';
-          if (result.messages && result.messages.length) {
-            console.warn('mammoth warnings:', result.messages);
-          }
-        } catch(mamErr) {
-          console.warn('mammoth 解析失败，改用文本读取:', mamErr);
-          toast('DOCX 解析异常，尝试文本模式…', 'info', 3000);
-          content = await readFileAsTextFallback(file);
-        }
-      } else {
-        // mammoth 不可用，直接文本读取
-        toast('mammoth.js 未加载，尝试文本读取…', 'info', 3000);
-        content = await readFileAsTextFallback(file);
-      }
-    } else if (ext === 'pdf') {
-      toast('PDF 文件暂不支持，请将内容粘贴到左侧文本框', 'error', 6000);
-      el('upload-status').textContent = '';
-      return;
-    } else {
-      content = await file.text();
-    }
-
-    state.modeling.preloadedContent = content;
-    badge.style.display = '';
-    badge.textContent = `📄 ${file.name}（${(file.size/1024).toFixed(1)} KB）已读取`;
-    el('upload-status').textContent = `✅ 已就绪：${file.name}`;
-  } catch(e) {
-    console.error('handleFileSelect error:', e);
-    toast('文件读取失败: ' + e.message, 'error');
-    el('upload-status').textContent = '';
-  }
-}
-function readFileAsTextFallback(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      // 尝试直接读（.doc/.docx/.pdf 可能读出乱码，但仍可提交后端处理）
-      resolve(e.target.result);
-    };
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
+  badge.style.display = '';
+  badge.textContent = `📄 ${file.name}（${(file.size/1024).toFixed(1)} KB）已选择`;
+  el('upload-status').textContent = `✅ 已就绪：${file.name}（点击"下一步"开始解析）`;
 }
 async function doUpload(){
   const pasteText = el('paste-text').value.trim();
@@ -1321,35 +1263,26 @@ async function doUpload(){
 
   el('upload-status').textContent = '上传中…';
   try {
-    let markdown, filename;
     if (pasteText) {
-      // 优先使用粘贴文本
-      markdown = pasteText; filename = '粘贴文本';
-      await uploadAndShowPreview(filename, markdown);
-    } else if (state.modeling.preloadedContent) {
-      // 使用预读内容（txt/md/docx）
-      filename = file.name;
-      markdown = state.modeling.preloadedContent;
-      await uploadAndShowPreview(filename, markdown);
+      // 文本直接上传
+      const resp = await api('POST','/api/modeling/upload',{filename:'粘贴文本', text: pasteText});
+      if (resp.error) { toast(resp.error, 'error'); el('upload-status').textContent=''; return; }
+      showDocPreview(resp.filename, resp.markdown, resp.charCount);
+      state.modeling.fileId = resp.fileId;
+      gotoMStep(1);
     } else {
-      // 回退：base64 发送（理论上不会走到这里）
+      // 文件 base64 发给后端解析
+      el('upload-status').textContent = '正在上传并解析文档…';
       const b64 = await fileToBase64(file);
       const resp = await api('POST','/api/modeling/upload',{filename:file.name, base64:b64});
       if (resp.error) { toast(resp.error, 'error'); el('upload-status').textContent=''; return; }
-      await uploadAndShowPreview(resp.filename, resp.markdown);
+      showDocPreview(resp.filename, resp.markdown, resp.charCount);
+      state.modeling.fileId = resp.fileId;
+      gotoMStep(1);
     }
   } catch(e){ toast('上传失败: '+e.message, 'error'); el('upload-status').textContent=''; }
 }
-async function uploadAndShowPreview(filename, markdown){
-  // 前端已解析完毕，直接把 markdown 发给后端建 session
-  const resp = await api('POST','/api/modeling/upload',{filename, text: markdown});
-  if (resp.error) { toast('后端存储失败: '+resp.error,'error'); return; }
-  state.modeling.fileId = resp.fileId;
-  state.modeling.markdown = markdown;
-  showDocPreview(filename, markdown);
-  gotoMStep(1);
-}
-function showDocPreview(filename, markdown){
+function showDocPreview(filename, markdown, charCount){
   state.modeling.markdown = markdown;
   const ext = filename.split('.').pop().toLowerCase();
   const icons = {'docx':'📝','pdf':'📄','txt':'📃','md':'📋','text':'📃'};
@@ -1362,7 +1295,7 @@ function showDocPreview(filename, markdown){
   status.innerHTML = '<span>✓</span><span id="doc-status-text">解析成功</span>';
 
   // 统计
-  const chars = markdown.length;
+  const chars = charCount || markdown.length;
   const words = markdown.replace(/\s+/g,' ').trim().split(' ').filter(Boolean).length;
   const paras = markdown.split(/\n\n+/).filter(l=>l.trim()).length;
   const lines = markdown.split('\n').length;

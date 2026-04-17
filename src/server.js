@@ -6,7 +6,8 @@ const app = express();
 const PORT = process.env.PORT || 3737;
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.raw({ limit: '50mb', type: 'application/octet-stream' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // API 路由
