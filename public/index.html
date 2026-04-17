@@ -1134,7 +1134,7 @@ async function loadDashboard(){
 //  本体建模：五步骤
 // ══════════════════════════════════════════════
 function resetModeling(){
-  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0};
+  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0,selectedFile:null};
   el('file-input').value=''; el('paste-text').value=''; el('upload-status').textContent='';
   el('preview-md').value=''; el('preview-chars').textContent='0';
   el('file-name-badge').style.display='none';
@@ -1159,12 +1159,15 @@ function handleFileDrop(event){
 }
 async function handleFileSelect(file){
   if(!file) return;
+  state.modeling.selectedFile = file; // 持久化到 state，避免 input 丢失引用
   const badge=el('file-name-badge');
   badge.style.display=''; badge.textContent=`📄 ${file.name}（${(file.size/1024).toFixed(1)} KB）`;
   el('upload-status').textContent=`已选择文件：${file.name}`;
 }
 async function doUpload(){
-  const pasteText=el('paste-text').value.trim(), fileInput=el('file-input'), file=fileInput.files[0];
+  const pasteText=el('paste-text').value.trim();
+  const fileInput=el('file-input');
+  const file=fileInput.files[0] || state.modeling.selectedFile;
   if(!pasteText&&!file){toast('请上传文件或粘贴文本','error'); return;}
   el('upload-status').textContent='上传中…';
   try{
