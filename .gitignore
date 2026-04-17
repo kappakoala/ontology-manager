@@ -1,10 +1,14 @@
 # 依赖
 node_modules/
 
+# 前端本地化依赖（通过 npm install mammoth 生成）
+public/mammoth.browser.min.js
+
 # 数据库文件（本地数据，不上传）
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/uploads/
 
 # 系统文件
 .DS_Store

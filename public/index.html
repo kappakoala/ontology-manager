@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>知识本体管理工具 · 方法论v3.7</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="/mammoth.browser.min.js"></script>
 <style>
 :root {
   --bg-base:#0f1117; --bg-panel:#161b27; --bg-card:#1e2535; --bg-hover:#252e44;
@@ -1267,22 +1267,23 @@ async function handleFileSelect(file){
   try {
     let content = '';
     if (ext === 'docx') {
-      if (typeof mammoth !== 'undefined') {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.convertToMarkdown({ arrayBuffer });
-        content = result.value;
-        if (result.messages && result.messages.length) {
-          console.warn('mammoth warnings:', result.messages);
+      if (typeof mammoth !== 'undefined' && typeof mammoth.convertToMarkdown === 'function') {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.convertToMarkdown({ arrayBuffer });
+          content = result.value || '';
+          if (result.messages && result.messages.length) {
+            console.warn('mammoth warnings:', result.messages);
+          }
+        } catch(mamErr) {
+          console.warn('mammoth 解析失败，改用文本读取:', mamErr);
+          toast('DOCX 解析异常，尝试文本模式…', 'info', 3000);
+          content = await readFileAsTextFallback(file);
         }
       } else {
-        // mammoth 不可用，尝试用 pure-text fallback
-        toast('mammoth.js 未加载，尝试文本提取…', 'info', 3000);
-        try {
-          content = await readFileAsTextFallback(file);
-        } catch(_) {
-          toast('DOCX 解析失败，请将内容粘贴到左侧文本框', 'error', 6000);
-          return;
-        }
+        // mammoth 不可用，直接文本读取
+        toast('mammoth.js 未加载，尝试文本读取…', 'info', 3000);
+        content = await readFileAsTextFallback(file);
       }
     } else if (ext === 'pdf') {
       toast('PDF 文件暂不支持，请将内容粘贴到左侧文本框', 'error', 6000);
@@ -1297,6 +1298,7 @@ async function handleFileSelect(file){
     badge.textContent = `📄 ${file.name}（${(file.size/1024).toFixed(1)} KB）已读取`;
     el('upload-status').textContent = `✅ 已就绪：${file.name}`;
   } catch(e) {
+    console.error('handleFileSelect error:', e);
     toast('文件读取失败: ' + e.message, 'error');
     el('upload-status').textContent = '';
   }
