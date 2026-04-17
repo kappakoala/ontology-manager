@@ -6,933 +6,516 @@
 <title>知识本体管理工具 · 方法论v3.7</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
-/* ─── 设计语言：深色学术风，参考 Protégé 三面板布局 ─── */
 :root {
-  --bg-base:    #0f1117;
-  --bg-panel:   #161b27;
-  --bg-card:    #1e2535;
-  --bg-hover:   #252e44;
-  --border:     #2a3554;
-  --accent:     #4f8ef7;
-  --accent2:    #7c5cbf;
-  --accent3:    #2ea98b;
-  --warn:       #e07b4a;
-  --danger:     #e05252;
-  --text-pri:   #e8eaf6;
-  --text-sec:   #8892b0;
-  --text-muted: #4a5568;
-  --shadow:     0 4px 24px rgba(0,0,0,.5);
-  /* 五要素颜色 */
-  --color-subject:   #4f8ef7;
-  --color-behavior:  #7c5cbf;
-  --color-object:    #2ea98b;
-  --color-time:      #e0994a;
-  --color-space:     #e05252;
-  --color-problem:   #c0392b;
-  --color-goal:      #27ae60;
-  --color-indicator: #8e44ad;
-  --color-domain:    #2980b9;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  background: var(--bg-base);
-  color: var(--text-pri);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── 顶部导航栏 ─────────────────────────────────────── */
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 20px;
-  height: 52px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  z-index: 100;
-}
-
-.topbar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -.3px;
-}
-
-.topbar-logo .logo-icon {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-}
-
-.topbar-tabs {
-  display: flex;
-  gap: 2px;
-  margin-left: 20px;
-}
-
-.topbar-tab {
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--text-sec);
-  cursor: pointer;
-  transition: all .15s;
-  border: none;
-  background: none;
-}
-
-.topbar-tab:hover { background: var(--bg-hover); color: var(--text-pri); }
-.topbar-tab.active { background: var(--accent); color: #fff; }
-
-.topbar-spacer { flex: 1; }
-
-.search-box {
-  display: flex;
-  align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 12px;
-  gap: 8px;
-  width: 240px;
-}
-
-.search-box input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text-pri);
-  font-size: 13px;
-  width: 100%;
-}
-
-.search-box input::placeholder { color: var(--text-muted); }
-
-.btn {
-  padding: 6px 14px;
-  border-radius: 7px;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all .15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #3a7be0; }
-.btn-ghost { background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border); }
-.btn-ghost:hover { background: var(--bg-hover); color: var(--text-pri); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { opacity: .85; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-
-/* ── 主内容区（三面板）─────────────────────────────── */
-.workspace {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* 左侧面板：领域树 + 概念分类 */
-.panel-left {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--bg-panel);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* 中间面板：列表 / 编辑器 */
-.panel-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-
-/* 右侧面板：详情 / 属性 / 关系 */
-.panel-right {
-  width: 340px;
-  flex-shrink: 0;
-  background: var(--bg-panel);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── 面板头部 ─────────────────────────────────────── */
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.panel-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-sec);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-
-/* ── 可滚动内容区 ─────────────────────────────────── */
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-}
-
-.panel-body::-webkit-scrollbar { width: 4px; }
-.panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* ── 树形列表 ─────────────────────────────────────── */
-.tree-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-sec);
-  transition: all .12s;
-  border-left: 3px solid transparent;
-  position: relative;
-}
-
-.tree-item:hover { background: var(--bg-hover); color: var(--text-pri); }
-.tree-item.active {
-  background: rgba(79, 142, 247, .12);
-  color: var(--accent);
-  border-left-color: var(--accent);
-}
-
-.tree-item .item-icon {
-  width: 18px; height: 18px;
-  border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.tree-item .item-count {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--bg-card);
-  padding: 1px 6px;
-  border-radius: 10px;
-}
-
-/* ── 概念卡片列表 ─────────────────────────────────── */
-.concept-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.concept-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: all .12s;
-  border-bottom: 1px solid rgba(42,53,84,.4);
-}
-
-.concept-row:hover { background: var(--bg-hover); }
-.concept-row.selected { background: rgba(79,142,247,.1); }
-
-.concept-row .type-badge {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.concept-row .concept-name {
-  font-size: 13px;
-  color: var(--text-pri);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.concept-row .concept-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-/* ── 详情面板 ─────────────────────────────────────── */
-.detail-section {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.detail-section:last-child { border-bottom: none; }
-
-.detail-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 6px;
-}
-
-.detail-value {
-  font-size: 13px;
-  color: var(--text-pri);
-  line-height: 1.6;
-}
-
-.attr-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.attr-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 5px 8px;
-  background: var(--bg-card);
-  border-radius: 5px;
-  font-size: 12px;
-}
-
-.attr-item .attr-name { color: var(--text-sec); flex-shrink: 0; min-width: 80px; }
-.attr-item .attr-value { color: var(--text-pri); flex: 1; }
-.attr-item .attr-type-tag {
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 10px;
-  background: var(--bg-hover);
-  color: var(--text-muted);
-}
-
-.relation-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: 11px;
-  cursor: pointer;
-  margin: 2px;
-  transition: all .12s;
-}
-
-.relation-chip:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── 工具栏 ─────────────────────────────────────── */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--bg-panel);
-}
-
-.toolbar-info {
-  font-size: 12px;
-  color: var(--text-muted);
-  flex: 1;
-}
-
-/* ── 图谱视图 ─────────────────────────────────────── */
-#graph-view {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  display: none;
-  flex-direction: column;
-}
-
-#graph-svg {
-  width: 100%;
-  height: 100%;
-  flex: 1;
-}
-
-.graph-toolbar {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 6px;
-  z-index: 10;
-}
-
-/* ── 仪表盘 ─────────────────────────────────────── */
-#dashboard-view {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: none;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
-}
-
-.stat-card .stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--accent);
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.stat-card .stat-label {
-  font-size: 12px;
-  color: var(--text-sec);
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-sec);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.element-type-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.type-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.type-bar-label {
-  width: 60px;
-  font-size: 12px;
-  color: var(--text-sec);
-  text-align: right;
-}
-
-.type-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-card);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.type-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width .5s;
-}
-
-.type-bar-count {
-  width: 30px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ── 模态框 ─────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-overlay.open { display: flex; }
-
-.modal {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  width: 520px;
-  max-width: 90vw;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.modal-close {
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 18px;
-  line-height: 1;
-  transition: color .12s;
-}
-
-.modal-close:hover { color: var(--text-pri); }
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modal-footer {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-}
-
-/* ── 表单 ─────────────────────────────────────── */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.form-label {
-  font-size: 12px;
-  color: var(--text-sec);
-  font-weight: 500;
-}
-
-.form-label .required { color: var(--danger); }
-
-.form-control {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text-pri);
-  outline: none;
-  transition: border-color .15s;
-  width: 100%;
-}
-
-.form-control:focus { border-color: var(--accent); }
-.form-control::placeholder { color: var(--text-muted); }
-
-textarea.form-control { min-height: 80px; resize: vertical; font-family: inherit; }
-select.form-control { cursor: pointer; }
-
-.form-row { display: flex; gap: 10px; }
-.form-row .form-group { flex: 1; }
-
-/* ── 通知 toast ─────────────────────────────────── */
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.toast {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
-  color: var(--text-pri);
-  box-shadow: var(--shadow);
-  animation: slideIn .2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 300px;
-}
-
-.toast.success { border-left: 3px solid var(--accent3); }
-.toast.error { border-left: 3px solid var(--danger); }
-
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-/* ── 要素类型颜色标签 ─────────────────────────────── */
-.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.badge-subject   { background: rgba(79,142,247,.15);  color: var(--color-subject);   }
-.badge-behavior  { background: rgba(124,92,191,.15);  color: var(--color-behavior);  }
-.badge-object    { background: rgba(46,169,139,.15);  color: var(--color-object);    }
-.badge-time      { background: rgba(224,153,74,.15);  color: var(--color-time);      }
-.badge-space     { background: rgba(224,82,82,.15);   color: var(--color-space);     }
-.badge-problem   { background: rgba(192,57,43,.15);   color: var(--color-problem);   }
-.badge-goal      { background: rgba(39,174,96,.15);   color: var(--color-goal);      }
-.badge-indicator { background: rgba(142,68,173,.15);  color: var(--color-indicator); }
-.badge-domain    { background: rgba(41,128,185,.15);  color: var(--color-domain);    }
-
-/* ── 空状态 ─────────────────────────────────────── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-  color: var(--text-muted);
-  gap: 12px;
-  text-align: center;
-}
-
-.empty-state .empty-icon { font-size: 40px; opacity: .5; }
-.empty-state .empty-title { font-size: 14px; color: var(--text-sec); }
-.empty-state .empty-desc { font-size: 12px; line-height: 1.6; }
-
-/* ── 分类标签条 ─────────────────────────────────── */
-.filter-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.filter-tab {
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all .12s;
-  color: var(--text-sec);
-  background: var(--bg-card);
-}
-
-.filter-tab:hover { border-color: var(--border); }
-.filter-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-/* 搜索结果 */
-.search-results {
-  position: absolute;
-  top: 100%;
-  left: 0; right: 0;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  z-index: 200;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.search-result-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background .1s;
-}
-
-.search-result-item:hover { background: var(--bg-hover); }
-
-.two-systems-diagram {
-  padding: 16px;
-  background: var(--bg-card);
-  border-radius: 10px;
-  margin-bottom: 16px;
-}
-
-.system-box {
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
-}
-
-.active-system { border: 1px solid rgba(79,142,247,.4); background: rgba(79,142,247,.05); }
-.object-system { border: 1px solid rgba(46,169,139,.4); background: rgba(46,169,139,.05); }
-
-.system-title {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.five-elements {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.element-pill {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all .15s;
-}
-
-.element-pill:hover { opacity: .8; transform: translateY(-1px); }
-
-/* ── 问题层级颜色 ─────────────────────────────────── */
-.level-phenomenon { color: var(--warn); }
-.level-root { color: var(--accent2); }
-.level-crux { color: var(--danger); }
-
-/* ── 加载指示 ─────────────────────────────────────── */
-.loading-mask {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-.spin { animation: spin 1s linear infinite; display: inline-block; }
-
-/* ── 工具提示 ─────────────────────────────────────── */
-.tooltip {
-  position: absolute;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 500;
-  max-width: 200px;
-  box-shadow: var(--shadow);
-}
+  --bg-base:#0f1117; --bg-panel:#161b27; --bg-card:#1e2535; --bg-hover:#252e44;
+  --border:#2a3554; --accent:#4f8ef7; --accent2:#7c5cbf; --accent3:#2ea98b;
+  --warn:#e07b4a; --danger:#e05252; --text-pri:#e8eaf6; --text-sec:#8892b0;
+  --text-muted:#4a5568; --shadow:0 4px 24px rgba(0,0,0,.5);
+  --color-subject:#4f8ef7; --color-behavior:#7c5cbf; --color-object:#2ea98b;
+  --color-time:#e0994a; --color-space:#e05252; --color-problem:#c0392b;
+  --color-goal:#27ae60; --color-indicator:#8e44ad; --color-domain:#2980b9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'PingFang SC','Microsoft YaHei',system-ui,sans-serif;background:var(--bg-base);color:var(--text-pri);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:var(--accent)}
+.topbar-logo .logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.topbar-tabs{display:flex;gap:2px;margin-left:20px}
+.topbar-tab{padding:6px 16px;border-radius:6px;font-size:13px;color:var(--text-sec);cursor:pointer;transition:all .15s;border:none;background:none}
+.topbar-tab:hover{background:var(--bg-hover);color:var(--text-pri)}
+.topbar-tab.active{background:var(--accent);color:#fff}
+.topbar-spacer{flex:1}
+.search-box{display:flex;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:5px 12px;gap:8px;width:240px;position:relative}
+.search-box input{background:none;border:none;outline:none;color:var(--text-pri);font-size:13px;width:100%}
+.search-box input::placeholder{color:var(--text-muted)}
+.btn{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-size:13px;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff} .btn-primary:hover{background:#3a7be0}
+.btn-success{background:var(--accent3);color:#fff} .btn-success:hover{opacity:.85}
+.btn-ghost{background:var(--bg-card);color:var(--text-sec);border:1px solid var(--border)} .btn-ghost:hover{background:var(--bg-hover);color:var(--text-pri)}
+.btn-danger{background:var(--danger);color:#fff} .btn-danger:hover{opacity:.85}
+.btn-sm{padding:4px 10px;font-size:12px}
+.workspace{display:flex;flex:1;overflow:hidden}
+.panel-left{width:240px;flex-shrink:0;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.panel-right{width:340px;flex-shrink:0;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.panel-title{font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px}
+.panel-body{flex:1;overflow-y:auto;padding:8px 0}
+.panel-body::-webkit-scrollbar{width:4px} .panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.tree-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:var(--text-sec);transition:all .12s;border-left:3px solid transparent}
+.tree-item:hover{background:var(--bg-hover);color:var(--text-pri)}
+.tree-item.active{background:rgba(79,142,247,.12);color:var(--accent);border-left-color:var(--accent)}
+.tree-item .item-icon{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.concept-list{display:flex;flex-direction:column;gap:1px}
+.concept-row{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:all .12s;border-bottom:1px solid rgba(42,53,84,.4)}
+.concept-row:hover{background:var(--bg-hover)} .concept-row.selected{background:rgba(79,142,247,.1)}
+.concept-row .type-badge{flex-shrink:0;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.concept-row .concept-name{font-size:13px;color:var(--text-pri);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.concept-row .concept-meta{font-size:11px;color:var(--text-muted)}
+.detail-section{padding:12px 16px;border-bottom:1px solid var(--border)}
+.detail-section:last-child{border-bottom:none}
+.detail-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.detail-value{font-size:13px;color:var(--text-pri);line-height:1.6}
+.attr-list{display:flex;flex-direction:column;gap:4px}
+.attr-item{display:flex;align-items:flex-start;gap:8px;padding:5px 8px;background:var(--bg-card);border-radius:5px;font-size:12px}
+.attr-item .attr-name{color:var(--text-sec);flex-shrink:0;min-width:80px}
+.attr-item .attr-value{color:var(--text-pri);flex:1}
+.attr-item .attr-type-tag{padding:1px 5px;border-radius:3px;font-size:10px;background:var(--bg-hover);color:var(--text-muted)}
+.relation-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;font-size:11px;cursor:pointer;margin:2px;transition:all .12s}
+.relation-chip:hover{border-color:var(--accent);color:var(--accent)}
+.toolbar{display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-panel)}
+.toolbar-info{font-size:11px;color:var(--text-muted);flex:1}
+#graph-view{flex:1;position:relative;overflow:hidden;display:none}
+#graph-svg{width:100%;height:100%}
+.graph-toolbar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;z-index:10;background:var(--bg-panel);border:1px solid var(--border);border-radius:20px;padding:4px 12px;box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap}
+#dashboard-view{flex:1;overflow-y:auto;padding:20px;display:none}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat-card .stat-value{font-size:32px;font-weight:700;color:var(--accent);line-height:1;margin-bottom:6px}
+.stat-card .stat-label{font-size:12px;color:var(--text-sec)}
+.section-title{font-size:14px;font-weight:600;color:var(--text-sec);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.element-type-bars{display:flex;flex-direction:column;gap:8px}
+.type-bar-row{display:flex;align-items:center;gap:10px}
+.type-bar-label{width:60px;font-size:12px;color:var(--text-sec);text-align:right}
+.type-bar-track{flex:1;height:8px;background:var(--bg-card);border-radius:4px;overflow:hidden}
+.type-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.type-bar-count{width:30px;font-size:12px;color:var(--text-muted)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;width:520px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15px;font-weight:600}
+.modal-close{cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1} .modal-close:hover{color:var(--text-pri)}
+.modal-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:12px;color:var(--text-sec);font-weight:500}
+.form-label .required{color:var(--danger)}
+.form-control{background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:8px 12px;font-size:13px;color:var(--text-pri);outline:none;transition:border-color .15s;width:100%}
+.form-control:focus{border-color:var(--accent)} .form-control::placeholder{color:var(--text-muted)}
+textarea.form-control{min-height:80px;resize:vertical;font-family:inherit} select.form-control{cursor:pointer}
+.form-row{display:flex;gap:10px} .form-row .form-group{flex:1}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--text-pri);box-shadow:var(--shadow);animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;max-width:300px}
+.toast.success{border-left:3px solid var(--accent3)} .toast.error{border-left:3px solid var(--danger)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-subject{background:rgba(79,142,247,.15);color:var(--color-subject)}
+.badge-behavior{background:rgba(124,92,191,.15);color:var(--color-behavior)}
+.badge-object{background:rgba(46,169,139,.15);color:var(--color-object)}
+.badge-time{background:rgba(224,153,74,.15);color:var(--color-time)}
+.badge-space{background:rgba(224,82,82,.15);color:var(--color-space)}
+.badge-problem{background:rgba(192,57,43,.15);color:var(--color-problem)}
+.badge-goal{background:rgba(39,174,96,.15);color:var(--color-goal)}
+.badge-indicator{background:rgba(142,68,173,.15);color:var(--color-indicator)}
+.badge-domain{background:rgba(41,128,185,.15);color:var(--color-domain)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;color:var(--text-muted);gap:12px;text-align:center}
+.empty-state .empty-icon{font-size:40px;opacity:.5}
+.empty-state .empty-title{font-size:14px;color:var(--text-sec)}
+.empty-state .empty-desc{font-size:12px;line-height:1.6}
+.filter-tabs{display:flex;gap:4px;padding:8px 12px;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0}
+.filter-tab{padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;border:1px solid transparent;transition:all .12s;color:var(--text-sec);background:var(--bg-card)}
+.filter-tab:hover{border-color:var(--border)} .filter-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);z-index:200;max-height:300px;overflow-y:auto}
+.search-result-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;font-size:13px} .search-result-item:hover{background:var(--bg-hover)}
+.two-systems-diagram{padding:10px;background:var(--bg-card);border-radius:10px;margin-bottom:8px}
+.system-box{border-radius:8px;padding:10px;margin-bottom:6px}
+.active-system{border:1px solid rgba(79,142,247,.4);background:rgba(79,142,247,.05)}
+.object-system{border:1px solid rgba(46,169,139,.4);background:rgba(46,169,139,.05)}
+.system-title{font-size:12px;font-weight:600;margin-bottom:6px}
+.five-elements{display:flex;gap:4px;flex-wrap:wrap}
+.element-pill{padding:3px 8px;border-radius:12px;font-size:11px;cursor:pointer;transition:all .15s}
+.element-pill:hover{opacity:.8;transform:translateY(-1px)}
+.level-phenomenon{color:var(--warn)} .level-root{color:var(--accent2)} .level-crux{color:var(--danger)}
+.loading-mask{display:flex;align-items:center;justify-content:center;padding:24px;color:var(--text-muted);font-size:13px}
+@keyframes spin{to{transform:rotate(360deg)}} .spin{animation:spin 1s linear infinite;display:inline-block}
+.tooltip{position:absolute;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;pointer-events:none;z-index:500;max-width:240px;box-shadow:var(--shadow);line-height:1.6}
+
+/* ── 图谱节点/边选中高亮 */
+.node-selected circle{stroke-width:3px !important;filter:drop-shadow(0 0 6px rgba(79,142,247,.8))}
+.edge-selected{stroke-width:3px !important;stroke-opacity:1 !important}
+
+/* ── 图谱内嵌详情浮层 */
+.graph-detail-panel{position:absolute;top:12px;left:12px;width:272px;background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);z-index:20;display:none;flex-direction:column;max-height:calc(100% - 24px)}
+.gdp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.gdp-body{padding:12px 14px;overflow-y:auto;font-size:12px}
+.gdp-body::-webkit-scrollbar{width:3px} .gdp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.gdl{color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.gdv{color:var(--text-pri);margin-bottom:10px;line-height:1.6;word-break:break-all}
+
+/* ── 本体建模 */
+#modeling-view{flex:1;overflow:hidden;display:none;flex-direction:column}
+.msteps{display:flex;align-items:center;padding:0 20px;height:38px;border-bottom:1px solid var(--border);flex-shrink:0;gap:0;overflow-x:auto;background:var(--bg-panel)}
+.ms-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all .2s}
+.ms-dot.active{background:var(--accent);transform:scale(1.4)}
+.ms-dot.done{background:var(--accent3)}
+.ms-label{font-size:11px;color:var(--text-muted);white-space:nowrap;transition:color .2s}
+.ms-label.active{color:var(--accent);font-weight:600}
+.ms-label.done{color:var(--accent3)}
+.ms-sep{color:var(--border);font-size:14px;margin:0 8px;flex-shrink:0}
+.ms-title{font-size:13px;font-weight:600;color:var(--text-pri);margin-right:auto}
+.mstep-pane{flex:1;overflow:hidden;display:none;flex-direction:column}
+.mstep-pane.active{display:flex}
+.mscroll{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.ms-action{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg-panel)}
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;flex:1;min-width:0}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(79,142,247,.05)}
+.drop-zone-icon{font-size:32px;margin-bottom:8px}
+.cand-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;transition:background .1s;margin-bottom:2px}
+.cand-row:hover{background:var(--bg-hover)}.cand-row.editing{background:rgba(79,142,247,.1)}
+.cand-conf{font-size:10px;color:var(--text-muted);margin-left:auto;flex-shrink:0}
+.cand-rel-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-card);border-radius:6px;margin-bottom:5px;font-size:12px}
+.section-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.section-title{font-size:13px;font-weight:600;color:var(--text-pri);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.input-row{display:flex;gap:8px;align-items:flex-start}
+.rel-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--bg-hover);border-radius:12px;font-size:11px}
+.rel-chip-src{color:var(--accent)}.rel-chip-tgt{color:var(--accent3)}
 </style>
 </head>
 <body>
 
-<!-- ── 顶部导航 ────────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════
+     顶栏
+══════════════════════════════════════ -->
 <header class="topbar">
   <div class="topbar-logo">
     <div class="logo-icon">🧠</div>
-    知识本体管理工具
+    <span>知识本体管理</span>
   </div>
   <nav class="topbar-tabs">
-    <button class="topbar-tab active" onclick="switchView('ontology')">本体浏览</button>
-    <button class="topbar-tab" onclick="switchView('graph')">关系图谱</button>
-    <button class="topbar-tab" onclick="switchView('problems')">问题目标</button>
-    <button class="topbar-tab" onclick="switchView('dashboard')">总览</button>
+    <button class="topbar-tab active" onclick="switchView('concepts')" id="tab-concepts">📋 概念管理</button>
+    <button class="topbar-tab" onclick="switchView('graph')" id="tab-graph">🕸️ 关系图谱</button>
+    <button class="topbar-tab" onclick="switchView('dashboard')" id="tab-dashboard">📊 总览仪表盘</button>
+    <button class="topbar-tab" onclick="switchView('modeling')" id="tab-modeling">🧬 本体建模</button>
   </nav>
   <div class="topbar-spacer"></div>
-  <div class="search-box" style="position:relative">
-    <span style="color:var(--text-muted);font-size:13px">🔍</span>
-    <input id="global-search" type="text" placeholder="搜索概念、领域…" oninput="doSearch(this.value)" autocomplete="off">
-    <div id="search-dropdown" class="search-results" style="display:none"></div>
+  <div class="search-box">
+    <span style="color:var(--text-muted);font-size:14px">🔍</span>
+    <input type="text" id="global-search" placeholder="搜索概念..." oninput="onGlobalSearch(this.value)">
+    <div class="search-results" id="search-results" style="display:none"></div>
   </div>
-  <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ 导出</button>
-  <label class="btn btn-ghost btn-sm" style="cursor:pointer">
-    ⬆ 导入
-    <input type="file" accept=".json" style="display:none" onchange="importData(event)">
-  </label>
+  <button class="btn btn-primary" onclick="openModal('modal-concept','new')">＋ 新增概念</button>
 </header>
 
-<!-- ── 主工作区 ──────────────────────────────────────────────── -->
-<main class="workspace">
+<!-- ══════════════════════════════════════
+     主工作区（概念管理 / 图谱视图 共用左右面板框架）
+══════════════════════════════════════ -->
+<div class="workspace" id="main-workspace">
 
-  <!-- ── 左面板：领域树 ─────────────────────────────── -->
-  <aside class="panel-left" id="left-panel">
+  <!-- ── 左侧：领域树 ── -->
+  <aside class="panel-left" id="panel-left">
     <div class="panel-header">
-      <span class="panel-title">领域 / 类别</span>
-      <button class="btn btn-ghost btn-sm" onclick="openDomainModal()">+ 新建</button>
+      <span class="panel-title">领域树</span>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-domain','new')">＋</button>
     </div>
+    <div class="panel-body" id="domain-tree"></div>
 
-    <!-- 两系统简图 -->
-    <div style="padding:8px 10px;border-bottom:1px solid var(--border)">
-      <div class="two-systems-diagram" style="padding:10px">
+    <!-- 两系统五要素速查 -->
+    <div style="padding:10px;border-top:1px solid var(--border);flex-shrink:0">
+      <div class="two-systems-diagram">
         <div class="system-box active-system">
-          <div class="system-title" style="color:var(--accent)">🔵 主动系统</div>
-          <div class="five-elements">
-            <span class="element-pill badge-subject" onclick="filterByType('subject')">主体</span>
-            <span class="element-pill badge-behavior" onclick="filterByType('behavior')">行为</span>
-            <span class="element-pill badge-object" onclick="filterByType('object')">客体</span>
-            <span class="element-pill badge-time" onclick="filterByType('time')">时间</span>
-            <span class="element-pill badge-space" onclick="filterByType('space')">空间</span>
-          </div>
+          <div class="system-title" style="color:var(--accent)">⚡ 主动系统</div>
+          <div class="five-elements" id="active-elements"></div>
         </div>
-        <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">⟷ 问题驱动 / 目标约束 ⟷</div>
+        <div style="text-align:center;font-size:11px;color:var(--text-muted);padding:4px 0">⇅ 问题驱动 / 目标约束</div>
         <div class="system-box object-system">
-          <div class="system-title" style="color:var(--accent3)">🟢 对象系统</div>
-          <div class="five-elements">
-            <span class="element-pill badge-subject" onclick="filterByType('subject')">主体</span>
-            <span class="element-pill badge-behavior" onclick="filterByType('behavior')">行为</span>
-            <span class="element-pill badge-object" onclick="filterByType('object')">客体</span>
-            <span class="element-pill badge-time" onclick="filterByType('time')">时间</span>
-            <span class="element-pill badge-space" onclick="filterByType('space')">空间</span>
-          </div>
+          <div class="system-title" style="color:var(--accent3)">🎯 对象系统</div>
+          <div class="five-elements" id="object-elements"></div>
         </div>
       </div>
-    </div>
-
-    <div class="panel-body" id="domain-tree">
-      <div class="loading-mask"><span class="spin">⟳</span> &nbsp;加载中…</div>
     </div>
   </aside>
 
-  <!-- ── 中间面板：本体列表 / 图谱 ─────────────────── -->
-  <section class="panel-main">
+  <!-- ── 中央主面板 ── -->
+  <main class="panel-main">
 
-    <!-- 本体列表视图 -->
-    <div id="ontology-view" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+    <!-- 概念列表视图 -->
+    <div id="concepts-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
       <div class="toolbar">
-        <span class="toolbar-info" id="list-info">选择左侧领域来浏览概念</span>
-        <button class="btn btn-primary btn-sm" onclick="openConceptModal()">+ 新建概念</button>
-        <button class="btn btn-ghost btn-sm" onclick="openRelationModal()">🔗 添加关系</button>
+        <div class="toolbar-info" id="concepts-count">加载中…</div>
+        <select class="form-control" style="width:120px" id="filter-system" onchange="applyFilter()">
+          <option value="">全部系统</option>
+          <option value="active_system">主动系统</option>
+          <option value="object_system">对象系统</option>
+          <option value="universal">通用</option>
+        </select>
       </div>
-      <div class="filter-tabs" id="type-filter-tabs">
-        <span class="filter-tab active" onclick="setTypeFilter('', this)">全部</span>
-        <span class="filter-tab" data-type="subject"   onclick="setTypeFilter('subject',   this)">主体</span>
-        <span class="filter-tab" data-type="behavior"  onclick="setTypeFilter('behavior',  this)">行为</span>
-        <span class="filter-tab" data-type="object"    onclick="setTypeFilter('object',    this)">客体</span>
-        <span class="filter-tab" data-type="time"      onclick="setTypeFilter('time',      this)">时间</span>
-        <span class="filter-tab" data-type="space"     onclick="setTypeFilter('space',     this)">空间</span>
-        <span class="filter-tab" data-type="problem"   onclick="setTypeFilter('problem',   this)">问题</span>
-        <span class="filter-tab" data-type="goal"      onclick="setTypeFilter('goal',      this)">目标</span>
-        <span class="filter-tab" data-type="indicator" onclick="setTypeFilter('indicator', this)">指标</span>
+      <div class="filter-tabs" id="filter-tabs">
+        <span class="filter-tab active" data-type="" onclick="setTypeFilter(this,'')">全部</span>
+        <span class="filter-tab" data-type="subject" onclick="setTypeFilter(this,'subject')">主体</span>
+        <span class="filter-tab" data-type="behavior" onclick="setTypeFilter(this,'behavior')">行为</span>
+        <span class="filter-tab" data-type="object" onclick="setTypeFilter(this,'object')">客体</span>
+        <span class="filter-tab" data-type="time" onclick="setTypeFilter(this,'time')">时间</span>
+        <span class="filter-tab" data-type="space" onclick="setTypeFilter(this,'space')">空间</span>
+        <span class="filter-tab" data-type="problem" onclick="setTypeFilter(this,'problem')">问题</span>
+        <span class="filter-tab" data-type="goal" onclick="setTypeFilter(this,'goal')">目标</span>
+        <span class="filter-tab" data-type="indicator" onclick="setTypeFilter(this,'indicator')">指标</span>
       </div>
-      <div class="panel-body" id="concept-list">
-        <div class="empty-state">
-          <div class="empty-icon">📚</div>
-          <div class="empty-title">暂无概念</div>
-          <div class="empty-desc">从左侧选择领域，或点击<br>「新建概念」开始构建知识本体</div>
-        </div>
-      </div>
+      <div class="panel-body concept-list" id="concept-list" style="padding:0"></div>
     </div>
 
     <!-- 图谱视图 -->
-    <div id="graph-view" style="display:none;flex:1;flex-direction:column;height:100%;overflow:hidden">
-      <div class="graph-toolbar">
-        <button class="btn btn-ghost btn-sm" onclick="resetZoom()">⊕ 重置视图</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadGraph()">🔄 刷新</button>
+    <div id="graph-view">
+      <!-- 图谱内嵌详情浮层 -->
+      <div class="graph-detail-panel" id="gdp">
+        <div class="gdp-header">
+          <span id="gdp-title" style="font-size:13px;font-weight:600;color:var(--text-pri)"></span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-ghost btn-sm" id="gdp-edit-btn" onclick="editGraphSelected()">✏️ 编辑</button>
+            <span style="cursor:pointer;color:var(--text-muted);font-size:16px" onclick="closeGraphDetail()">✕</span>
+          </div>
+        </div>
+        <div class="gdp-body" id="gdp-body"></div>
       </div>
       <svg id="graph-svg"></svg>
-      <div class="tooltip" id="graph-tooltip" style="display:none"></div>
+      <div class="graph-toolbar">
+        <span id="graph-info" style="font-size:11px;color:var(--text-muted);padding-right:8px;border-right:1px solid var(--border);margin-right:4px"></span>
+        <button class="btn btn-ghost btn-sm" onclick="graphZoom(0.8)" title="缩小" style="padding:3px 7px">－</button>
+        <button class="btn btn-ghost btn-sm" onclick="graphZoom(1.2)" title="放大" style="padding:3px 7px">＋</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetGraphZoom()" title="重置视图" style="padding:3px 7px">↺</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleGraphLabels()" title="标签" id="lbl-btn" style="padding:3px 7px">🏷</button>
+      </div>
     </div>
 
-    <!-- 仪表盘视图 -->
+    <!-- 总览仪表盘 -->
     <div id="dashboard-view">
-      <!-- 由 JS 动态生成 -->
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="section-title">各要素分布</div>
+      <div class="element-type-bars" id="type-bars"></div>
     </div>
 
-    <!-- 问题目标视图 -->
-    <div id="problems-view" style="display:none;flex:1;overflow:hidden;flex-direction:column">
-      <div class="toolbar">
-        <span class="toolbar-info">问题（三层）与目标管理</span>
-        <button class="btn btn-primary btn-sm" onclick="openProblemModal()">+ 新建问题</button>
-        <button class="btn btn-ghost btn-sm" onclick="openGoalModal()">🎯 新建目标</button>
-      </div>
-      <div class="panel-body" id="problems-list" style="padding:16px">
-        <div class="loading-mask"><span class="spin">⟳</span></div>
-      </div>
-    </div>
+    <!-- 本体建模视图 -->
+    <div id="modeling-view">
 
-  </section>
+      <!-- 步骤指示器：紧凑点线式 -->
+      <div class="msteps">
+        <span class="ms-title">🧬 本体建模</span>
+        <div class="ms-dot active" id="ms-dot-0"></div>
+        <span class="ms-label active" id="ms-label-0">上传文档</span>
+        <span class="ms-sep">›</span>
+        <div class="ms-dot" id="ms-dot-1"></div>
+        <span class="ms-label" id="ms-label-1">预览</span>
+        <span class="ms-sep">›</span>
+        <div class="ms-dot" id="ms-dot-2"></div>
+        <span class="ms-label" id="ms-label-2">概念抽取</span>
+        <span class="ms-sep">›</span>
+        <div class="ms-dot" id="ms-dot-3"></div>
+        <span class="ms-label" id="ms-label-3">关系发现</span>
+        <span class="ms-sep">›</span>
+        <div class="ms-dot" id="ms-dot-4"></div>
+        <span class="ms-label" id="ms-label-4">保存</span>
+      </div>
 
-  <!-- ── 右面板：详情 ──────────────────────────────── -->
-  <aside class="panel-right" id="right-panel">
+      <!-- 步骤 1：上传文档（左右分栏） -->
+      <div class="mstep-pane active" id="mpane-0">
+        <div class="mscroll">
+          <!-- 上传区 -->
+          <div class="section-card">
+            <div class="section-title">📂 上传文档</div>
+            <div style="display:flex;gap:16px;align-items:stretch">
+              <div class="drop-zone" id="drop-zone"
+                   onclick="document.getElementById('file-input').click()"
+                   ondragover="event.preventDefault();this.classList.add('dragover')"
+                   ondragleave="this.classList.remove('dragover')"
+                   ondrop="handleFileDrop(event)">
+                <div class="drop-zone-icon">📄</div>
+                <div style="font-size:13px;color:var(--text-sec);margin-bottom:4px">点击或拖拽上传文件</div>
+                <div style="font-size:11px;color:var(--text-muted)">.docx · .pdf · .txt · .md</div>
+                <div id="file-name-badge" style="margin-top:8px;font-size:12px;color:var(--accent);display:none"></div>
+              </div>
+              <input type="file" id="file-input" style="display:none" accept=".docx,.pdf,.txt,.md" onchange="handleFileSelect(this.files[0])">
+              <div style="width:1px;background:var(--border);flex-shrink:0"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0">
+                <div style="font-size:12px;color:var(--text-sec);margin-bottom:2px">✏️ 或直接粘贴文本</div>
+                <textarea class="form-control" id="paste-text" rows="6" placeholder="将业务文档内容粘贴到此处…" style="flex:1;font-size:13px"></textarea>
+              </div>
+            </div>
+          </div>
+          <!-- 指引说明 -->
+          <div class="section-card" style="background:rgba(79,142,247,.04);border-color:rgba(79,142,247,.2)">
+            <div style="font-size:12px;color:var(--text-sec);line-height:1.8">
+              <b style="color:var(--accent)">📌 工作流程：</b>上传/粘贴业务文档 → AI 自动识别五要素（主体/行为/客体/时间/空间）→ 逐条确认概念 → 手动建立关系 → 保存入库
+            </div>
+          </div>
+        </div>
+        <div class="ms-action">
+          <span style="font-size:12px;color:var(--text-muted);flex:1" id="upload-status"></span>
+          <button class="btn btn-primary" onclick="doUpload()">下一步：预览文档 →</button>
+        </div>
+      </div>
+
+      <!-- 步骤 2：文档预览 -->
+      <div class="mstep-pane" id="mpane-1">
+        <div class="mscroll">
+          <div class="section-card">
+            <div class="section-title">📝 文档预览（可编辑）</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+              共 <span id="preview-chars" style="color:var(--accent);font-weight:600">0</span> 字符 · 直接在下方编辑后再抽取
+            </div>
+            <textarea class="form-control" id="preview-md" rows="20" style="font-family:monospace;font-size:12px;min-height:300px"></textarea>
+          </div>
+        </div>
+        <div class="ms-action">
+          <button class="btn btn-ghost" onclick="gotoMStep(0)">← 重新上传</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" onclick="doExtract()">🚀 开始抽取五要素</button>
+        </div>
+      </div>
+
+      <!-- 步骤 3：概念抽取（左右分栏） -->
+      <div class="mstep-pane" id="mpane-2">
+        <div class="mscroll" style="flex-direction:row;align-items:flex-start">
+          <!-- 左：候选列表 -->
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+            <div class="section-card" style="padding:12px 16px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:13px;font-weight:600;color:var(--text-pri)">🔍 候选概念</span>
+                <span style="font-size:11px;color:var(--text-muted)">共 <span id="cand-total" style="color:var(--accent)">0</span> 个</span>
+                <div style="flex:1"></div>
+                <button class="btn btn-ghost btn-sm" onclick="selectAllCands(true)">全选</button>
+                <button class="btn btn-ghost btn-sm" onclick="selectAllCands(false)">全不选</button>
+              </div>
+              <!-- 五要素过滤 -->
+              <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <span class="filter-tab active" onclick="filterCands(this,'')">全部</span>
+                <span class="filter-tab" onclick="filterCands(this,'subject')" style="color:var(--color-subject)">主体</span>
+                <span class="filter-tab" onclick="filterCands(this,'behavior')" style="color:var(--color-behavior)">行为</span>
+                <span class="filter-tab" onclick="filterCands(this,'object')" style="color:var(--color-object)">客体</span>
+                <span class="filter-tab" onclick="filterCands(this,'time')" style="color:var(--color-time)">时间</span>
+                <span class="filter-tab" onclick="filterCands(this,'space')" style="color:var(--color-space)">空间</span>
+              </div>
+            </div>
+            <div id="cand-list" style="flex:1;overflow-y:auto;padding:0 4px"></div>
+          </div>
+          <!-- 右：编辑面板 -->
+          <div style="width:260px;flex-shrink:0;padding-left:12px">
+            <div class="section-card">
+              <div class="section-title">✏️ 编辑概念</div>
+              <div id="cand-edit-panel" style="font-size:12px;color:var(--text-muted);line-height:1.6">
+                点击左侧概念进行编辑
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ms-action">
+          <button class="btn btn-ghost" onclick="gotoMStep(1)">← 重新预览</button>
+          <span style="font-size:12px;color:var(--text-muted);flex:1;text-align:center">
+            已确认 <span id="cand-confirmed" style="color:var(--accent3);font-weight:600">0</span> 个概念
+          </span>
+          <button class="btn btn-primary" onclick="gotoMStep(3)">确认概念 → 关系发现</button>
+        </div>
+      </div>
+
+      <!-- 步骤 4：关系发现 -->
+      <div class="mstep-pane" id="mpane-3">
+        <div class="mscroll">
+          <div class="section-card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div class="section-title" style="margin:0">🔗 关系发现</div>
+              <span style="font-size:11px;color:var(--text-muted)">共 <span id="rel-total" style="color:var(--accent3)">0</span> 条</span>
+              <div style="flex:1"></div>
+              <button class="btn btn-ghost btn-sm" onclick="autoDiscoverRelations()">🤖 自动发现</button>
+              <button class="btn btn-success btn-sm" onclick="openAddRelModal()">＋ 手动添加</button>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+              在已确认的概念之间建立关系（主动系统 ⟷ 对象系统）
+            </div>
+            <div id="rel-list" style="display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto"></div>
+            <div id="rel-empty" style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">
+              暂无关系，点击「自动发现」或「手动添加」开始
+            </div>
+          </div>
+        </div>
+        <div class="ms-action">
+          <button class="btn btn-ghost" onclick="gotoMStep(2)">← 重新确认概念</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" onclick="gotoMStep(4)">下一步：保存入库 →</button>
+        </div>
+      </div>
+
+      <!-- 步骤 5：保存入库 -->
+      <div class="mstep-pane" id="mpane-4">
+        <div class="mscroll">
+          <div class="section-card" style="max-width:520px">
+            <div class="section-title">💾 保存到知识库</div>
+            <div class="form-group">
+              <label class="form-label">归属领域</label>
+              <select class="form-control" id="save-domain-sel" onchange="onSaveDomainChange()">
+                <option value="">-- 选择已有领域 --</option>
+                <option value="__new__">＋ 新建领域</option>
+              </select>
+            </div>
+            <div class="form-group" id="new-domain-row" style="display:none">
+              <label class="form-label">新领域名称</label>
+              <input class="form-control" type="text" id="new-domain-name" placeholder="输入领域名称">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+              <div style="background:rgba(79,142,247,.08);border-radius:8px;padding:14px;text-align:center">
+                <div style="font-size:24px;font-weight:700;color:var(--accent)"><span id="save-concepts-cnt">0</span></div>
+                <div style="font-size:11px;color:var(--text-sec);margin-top:4px">个概念</div>
+              </div>
+              <div style="background:rgba(46,169,139,.08);border-radius:8px;padding:14px;text-align:center">
+                <div style="font-size:24px;font-weight:700;color:var(--accent3)"><span id="save-relations-cnt">0</span></div>
+                <div style="font-size:11px;color:var(--text-sec);margin-top:4px">条关系</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ms-action">
+          <button class="btn btn-ghost" onclick="gotoMStep(3)">← 返回</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-success" onclick="doSaveModeling()">✅ 确认保存</button>
+        </div>
+      </div>
+
+    </div><!-- /modeling-view -->
+
+  </main><!-- /panel-main -->
+
+  <!-- ── 右侧：详情面板 ── -->
+  <aside class="panel-right" id="panel-right">
     <div class="panel-header">
       <span class="panel-title" id="detail-panel-title">概念详情</span>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" id="edit-btn" onclick="editSelected()" style="display:none">✏ 编辑</button>
-        <button class="btn btn-danger btn-sm" id="delete-btn" onclick="deleteSelected()" style="display:none">🗑</button>
+        <button class="btn btn-ghost btn-sm" id="detail-edit-btn" onclick="editSelected()" style="display:none">✏️</button>
+        <button class="btn btn-danger btn-sm" id="detail-del-btn" onclick="deleteSelected()" style="display:none">🗑</button>
       </div>
     </div>
-    <div class="panel-body" id="detail-panel">
+    <div id="detail-content">
       <div class="empty-state">
         <div class="empty-icon">👆</div>
-        <div class="empty-title">点击概念查看详情</div>
-        <div class="empty-desc">选择列表中的概念查看其<br>属性、关系等详细信息</div>
+        <div class="empty-title">选择一个概念查看详情</div>
       </div>
     </div>
   </aside>
-</main>
 
-<!-- ── 模态框区域 ──────────────────────────────────────────────── -->
+</div><!-- /main-workspace -->
 
-<!-- 概念 Modal -->
-<div class="modal-overlay" id="concept-modal">
-  <div class="modal">
+<!-- ══════════════════════════════════════
+     Modal：新建/编辑 概念
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-concept">
+  <div class="modal" style="width:560px">
     <div class="modal-header">
-      <span class="modal-title" id="concept-modal-title">新建概念</span>
-      <span class="modal-close" onclick="closeModal('concept-modal')">✕</span>
+      <span class="modal-title" id="modal-concept-title">新增概念</span>
+      <span class="modal-close" onclick="closeModal('modal-concept')">✕</span>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="concept-id">
       <div class="form-row">
-        <div class="form-group" style="flex:2">
-          <label class="form-label">概念名称 <span class="required">*</span></label>
-          <input class="form-control" id="cf-name" placeholder="如：政务主体、审批行为…">
+        <div class="form-group">
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="concept-name" placeholder="概念名称">
         </div>
         <div class="form-group">
           <label class="form-label">别名</label>
-          <input class="form-control" id="cf-alias" placeholder="可选">
+          <input type="text" class="form-control" id="concept-alias" placeholder="别称/英文名">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">要素类型 <span class="required">*</span></label>
-          <select class="form-control" id="cf-element-type">
+          <select class="form-control" id="concept-type">
             <option value="subject">主体</option>
             <option value="behavior">行为</option>
             <option value="object">客体</option>
@@ -945,7 +528,7 @@ select.form-control { cursor: pointer; }
         </div>
         <div class="form-group">
           <label class="form-label">所属系统</label>
-          <select class="form-control" id="cf-system-role">
+          <select class="form-control" id="concept-system">
             <option value="universal">通用</option>
             <option value="active_system">主动系统</option>
             <option value="object_system">对象系统</option>
@@ -954,227 +537,136 @@ select.form-control { cursor: pointer; }
       </div>
       <div class="form-group">
         <label class="form-label">所属领域</label>
-        <select class="form-control" id="cf-domain-id">
-          <option value="">— 无 —</option>
-        </select>
+        <select class="form-control" id="concept-domain"></select>
       </div>
       <div class="form-group">
         <label class="form-label">定义</label>
-        <textarea class="form-control" id="cf-definition" placeholder="对该概念的明确定义…"></textarea>
+        <textarea class="form-control" id="concept-def" placeholder="概念的完整定义…" rows="3"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">备注</label>
-        <textarea class="form-control" id="cf-note" placeholder="补充说明…" style="min-height:60px"></textarea>
-      </div>
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-sec)">
-          <input type="checkbox" id="cf-universal"> 属于通用知识本体
-        </label>
+        <textarea class="form-control" id="concept-note" placeholder="补充说明…" rows="2"></textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('concept-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveConcept()">保存概念</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-concept')">取消</button>
+      <button class="btn btn-primary" onclick="saveConcept()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- 属性 Modal -->
-<div class="modal-overlay" id="attr-modal">
-  <div class="modal" style="width:400px">
-    <div class="modal-header">
-      <span class="modal-title">添加属性</span>
-      <span class="modal-close" onclick="closeModal('attr-modal')">✕</span>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group" style="flex:2">
-          <label class="form-label">属性名 <span class="required">*</span></label>
-          <input class="form-control" id="af-name" placeholder="如：行政级别">
-        </div>
-        <div class="form-group">
-          <label class="form-label">类型</label>
-          <select class="form-control" id="af-attr-type">
-            <option value="base">基础属性</option>
-            <option value="domain" selected>领域属性</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">属性值</label>
-        <input class="form-control" id="af-value" placeholder="属性的具体值（可选）">
-      </div>
-      <div class="form-group">
-        <label class="form-label">数据类型</label>
-        <select class="form-control" id="af-data-type">
-          <option value="string">文本</option>
-          <option value="number">数值</option>
-          <option value="date">日期</option>
-          <option value="boolean">布尔</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">备注</label>
-        <input class="form-control" id="af-note" placeholder="可选">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('attr-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveAttr()">保存属性</button>
-    </div>
-  </div>
-</div>
-
-<!-- 关系 Modal -->
-<div class="modal-overlay" id="relation-modal">
+<!-- ══════════════════════════════════════
+     Modal：新建/编辑 关系
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-relation">
   <div class="modal" style="width:480px">
     <div class="modal-header">
-      <span class="modal-title">添加关系</span>
-      <span class="modal-close" onclick="closeModal('relation-modal')">✕</span>
+      <span class="modal-title" id="modal-relation-title">新增关系</span>
+      <span class="modal-close" onclick="closeModal('modal-relation')">✕</span>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="relation-id">
       <div class="form-group">
         <label class="form-label">发起方概念 <span class="required">*</span></label>
-        <select class="form-control" id="rf-source-id">
-          <option value="">— 请选择 —</option>
-        </select>
+        <select class="form-control" id="relation-source"></select>
       </div>
       <div class="form-group">
         <label class="form-label">关系类型 <span class="required">*</span></label>
-        <select class="form-control" id="rf-relation-type">
-          <option value="">— 请选择 —</option>
-          <option>分类</option><option>包含</option><option>实施</option>
-          <option>利用</option><option>在</option><option>确认</option>
-          <option>提出</option><option>制定</option><option>表现</option>
-          <option>解决</option><option>实现</option><option>依据</option>
-          <option>参考</option><option>输入</option><option>输出</option>
-          <option>集约</option><option>前置</option>
-        </select>
+        <select class="form-control" id="relation-type"></select>
       </div>
       <div class="form-group">
         <label class="form-label">目标方概念 <span class="required">*</span></label>
-        <select class="form-control" id="rf-target-id">
-          <option value="">— 请选择 —</option>
-        </select>
+        <select class="form-control" id="relation-target"></select>
       </div>
-      <div class="form-group">
-        <label class="form-label">自定义标签</label>
-        <input class="form-control" id="rf-label" placeholder="可选，覆盖默认关系名">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">关系类别</label>
+          <select class="form-control" id="relation-kind">
+            <option value="static">静态</option>
+            <option value="dynamic">动态</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">标签</label>
+          <input type="text" class="form-control" id="relation-label" placeholder="自定义标签">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">备注</label>
-        <input class="form-control" id="rf-note" placeholder="可选">
+        <textarea class="form-control" id="relation-note" placeholder="补充说明…" rows="2"></textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('relation-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveRelation()">保存关系</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-relation')">取消</button>
+      <button class="btn btn-danger btn-sm" id="rel-delete-btn" onclick="deleteRelation()" style="display:none;margin-right:auto">删除</button>
+      <button class="btn btn-primary" onclick="saveRelation()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- 领域 Modal -->
-<div class="modal-overlay" id="domain-modal">
+<!-- ══════════════════════════════════════
+     Modal：新建/编辑 领域
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-domain">
   <div class="modal" style="width:400px">
     <div class="modal-header">
-      <span class="modal-title">新建领域</span>
-      <span class="modal-close" onclick="closeModal('domain-modal')">✕</span>
+      <span class="modal-title" id="modal-domain-title">新建领域</span>
+      <span class="modal-close" onclick="closeModal('modal-domain')">✕</span>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="domain-id">
       <div class="form-group">
         <label class="form-label">领域名称 <span class="required">*</span></label>
-        <input class="form-control" id="df-name" placeholder="如：政务领域、教育领域…">
+        <input type="text" class="form-control" id="domain-name" placeholder="如：政务领域">
       </div>
       <div class="form-group">
         <label class="form-label">描述</label>
-        <textarea class="form-control" id="df-description" placeholder="该领域的说明…"></textarea>
+        <textarea class="form-control" id="domain-desc" rows="3" placeholder="领域的用途说明…"></textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('domain-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveDomain()">保存领域</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-domain')">取消</button>
+      <button class="btn btn-primary" onclick="saveDomain()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- 问题 Modal -->
-<div class="modal-overlay" id="problem-modal">
-  <div class="modal" style="width:440px">
+<!-- ══════════════════════════════════════
+     Modal：建模 - 手动添加关系
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-add-rel">
+  <div class="modal" style="width:460px">
     <div class="modal-header">
-      <span class="modal-title">新建问题</span>
-      <span class="modal-close" onclick="closeModal('problem-modal')">✕</span>
+      <span class="modal-title">添加关系</span>
+      <span class="modal-close" onclick="closeModal('modal-add-rel')">✕</span>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="addrel-idx">
       <div class="form-group">
-        <label class="form-label">问题名称 <span class="required">*</span></label>
-        <input class="form-control" id="pf-name" placeholder="描述具体问题">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">问题层级 <span class="required">*</span></label>
-          <select class="form-control" id="pf-level">
-            <option value="phenomenon">表象性问题</option>
-            <option value="root">根源性问题</option>
-            <option value="crux">症结性问题</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">所属领域</label>
-          <select class="form-control" id="pf-domain-id">
-            <option value="">— 无 —</option>
-          </select>
-        </div>
+        <label class="form-label">发起方概念</label>
+        <select class="form-control" id="addrel-source"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">描述</label>
-        <textarea class="form-control" id="pf-description" placeholder="问题的详细描述…"></textarea>
+        <label class="form-label">关系类型</label>
+        <select class="form-control" id="addrel-type">
+          <option value="包含">包含</option><option value="作用于">作用于</option><option value="依赖">依赖</option>
+          <option value="实现">实现</option><option value="协同">协同</option><option value="触发">触发</option>
+          <option value="对应">对应</option><option value="相关">相关</option><option value="支配">支配</option>
+          <option value="执行">执行</option><option value="分类">分类</option><option value="实施">实施</option>
+          <option value="利用">利用</option><option value="在">在</option><option value="确认">确认</option>
+          <option value="提出">提出</option><option value="制定">制定</option><option value="表现">表现</option>
+          <option value="解决">解决</option><option value="依据">依据</option><option value="参考">参考</option>
+          <option value="输入">输入</option><option value="输出">输出</option><option value="前置">前置</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">目标方概念</label>
+        <select class="form-control" id="addrel-target"></select>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('problem-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveProblem()">保存问题</button>
-    </div>
-  </div>
-</div>
-
-<!-- 目标 Modal -->
-<div class="modal-overlay" id="goal-modal">
-  <div class="modal" style="width:440px">
-    <div class="modal-header">
-      <span class="modal-title">新建目标</span>
-      <span class="modal-close" onclick="closeModal('goal-modal')">✕</span>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">目标名称 <span class="required">*</span></label>
-        <input class="form-control" id="gf-name" placeholder="描述具体目标">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">解决的问题</label>
-          <select class="form-control" id="gf-problem-id">
-            <option value="">— 无 —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">所属领域</label>
-          <select class="form-control" id="gf-domain-id">
-            <option value="">— 无 —</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">指标（量化）</label>
-        <input class="form-control" id="gf-indicator" placeholder="如：审批时效 ≤ 3 个工作日">
-      </div>
-      <div class="form-group">
-        <label class="form-label">描述</label>
-        <textarea class="form-control" id="gf-description" placeholder="目标的详细描述…"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('goal-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveGoal()">保存目标</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-rel')">取消</button>
+      <button class="btn btn-primary" onclick="saveAddRel()">添加</button>
     </div>
   </div>
 </div>
@@ -1182,816 +674,650 @@ select.form-control { cursor: pointer; }
 <!-- Toast 容器 -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ── 主逻辑 ──────────────────────────────────────────────── -->
 <script>
-const API = '/api';
-
-// ─── 全局状态 ─────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  全局状态
+// ══════════════════════════════════════════════
 const state = {
-  domains: [],
-  concepts: [],
-  selectedDomainId: null,
-  selectedConcept: null,
-  typeFilter: '',
-  editingConceptId: null,
-  currentView: 'ontology',
+  domains: [], concepts: [], currentDomainId: null,
+  selectedConceptId: null, currentView: 'concepts',
+  filterType: '', filterSystem: '',
+  graphNodes: [], graphEdges: [], graphSimulation: null,
+  graphZoomBehavior: null, showGraphLabels: true,
+  graphSelectedId: null, graphSelectedType: null,
+  modeling: { fileId: null, markdown: '', currentStep: 0, candidates: [], relations: [] }
 };
 
-// ─── 工具函数 ─────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || '请求失败');
-  return json;
+// ── 工具
+const api = async (method, url, body) => {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  return r.json();
+};
+function toast(msg, type='info', dur=3000) {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type==='success'?'✓':type==='error'?'✕':'ℹ';
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  c.appendChild(t); setTimeout(()=>t.remove(), dur);
 }
+const TYPE_LABELS = {subject:'主体',behavior:'行为',object:'客体',time:'时间',space:'空间',problem:'问题',goal:'目标',indicator:'指标',domain:'领域'};
+const SYS_LABELS = {active_system:'主动系统',object_system:'对象系统',universal:'通用'};
+const ELEM_COLORS = {subject:'#4f8ef7',behavior:'#7c5cbf',object:'#2ea98b',time:'#e0994a',space:'#e05252',problem:'#c0392b',goal:'#27ae60',indicator:'#8e44ad',domain:'#2980b9'};
+function typeBadge(t){return `<span class="badge badge-${t}">${TYPE_LABELS[t]||t}</span>`;}
+function el(id){return document.getElementById(id);}
 
-function toast(msg, type = 'success') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span> ${msg}`;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// 五要素中文映射
-const TYPE_LABELS = {
-  subject: '主体', behavior: '行为', object: '客体',
-  time: '时间', space: '空间', problem: '问题',
-  goal: '目标', indicator: '指标', domain: '领域'
-};
-
-const LEVEL_LABELS = {
-  phenomenon: '表象', root: '根源', crux: '症结'
-};
-
-const SYSTEM_LABELS = {
-  active_system: '主动系统', object_system: '对象系统', universal: '通用'
-};
-
-function typeBadge(t) {
-  return `<span class="badge badge-${t}">${TYPE_LABELS[t] || t}</span>`;
-}
-
-// ─── 视图切换 ─────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  视图切换
+// ══════════════════════════════════════════════
 function switchView(view) {
   state.currentView = view;
-  document.querySelectorAll('.topbar-tab').forEach((t, i) => {
-    const views = ['ontology', 'graph', 'problems', 'dashboard'];
-    t.classList.toggle('active', views[i] === view);
+  ['concepts','graph','dashboard','modeling'].forEach(v => {
+    const ve = el(v+'-view'), te = el('tab-'+v);
+    if(ve) ve.style.display='none';
+    if(te) te.classList.remove('active');
   });
-
-  document.getElementById('ontology-view').style.display = view === 'ontology' ? 'flex' : 'none';
-  document.getElementById('graph-view').style.display = view === 'graph' ? 'flex' : 'none';
-  document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'block' : 'none';
-  const pv = document.getElementById('problems-view');
-  pv.style.display = view === 'problems' ? 'flex' : 'none';
-
-  if (view === 'graph') {
-    // 延迟执行，确保 DOM 已经渲染
-    setTimeout(loadGraph, 100);
+  const pl=el('panel-left'), pr=el('panel-right');
+  if(view==='concepts'){
+    el('concepts-view').style.display='flex'; el('tab-concepts').classList.add('active');
+    pl.style.display='flex'; pr.style.display='flex'; loadConcepts();
+  } else if(view==='graph'){
+    el('graph-view').style.display='flex'; el('tab-graph').classList.add('active');
+    pl.style.display='flex'; pr.style.display='none'; loadGraph();
+  } else if(view==='dashboard'){
+    el('dashboard-view').style.display='block'; el('tab-dashboard').classList.add('active');
+    pl.style.display='none'; pr.style.display='none'; loadDashboard();
+  } else if(view==='modeling'){
+    el('modeling-view').style.display='flex'; el('tab-modeling').classList.add('active');
+    pl.style.display='none'; pr.style.display='none';
+    resetModeling();
   }
-  if (view === 'dashboard') loadDashboard();
-  if (view === 'problems') loadProblems();
 }
 
-// ─── 领域树 ───────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  领域树
+// ══════════════════════════════════════════════
 async function loadDomains() {
-  const { data } = await api('/domains');
-  state.domains = data;
-  renderDomainTree();
-  fillDomainSelects();
+  const r = await api('GET','/api/domains');
+  state.domains = r.data||[];
+  renderDomainTree(); renderDomainSelects(); renderTwoSystems();
 }
 
 function renderDomainTree() {
-  const el = document.getElementById('domain-tree');
-  if (!state.domains.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-title">暂无领域</div></div>';
-    return;
+  const tree = el('domain-tree'); tree.innerHTML='';
+  const all = document.createElement('div');
+  all.className='tree-item'+(state.currentDomainId?'':' active');
+  all.innerHTML=`<span class="item-icon">🌐</span><span>全部</span>`;
+  all.onclick=()=>{ state.currentDomainId=null; renderDomainTree(); loadConcepts(); };
+  tree.appendChild(all);
+  for(const d of state.domains){
+    const item=document.createElement('div');
+    item.className='tree-item'+(state.currentDomainId===d.id?' active':'');
+    item.innerHTML=`<span class="item-icon" style="background:rgba(79,142,247,.2)">📁</span><span style="flex:1">${d.name}</span><span style="font-size:10px;color:var(--text-muted)" onclick="event.stopPropagation();openModal('modal-domain','edit',${JSON.stringify(d).replace(/"/g,'&quot;')})">⋮</span>`;
+    item.onclick=()=>{ state.currentDomainId=d.id; renderDomainTree(); loadConcepts(); if(state.currentView==='graph') loadGraph(); };
+    tree.appendChild(item);
   }
-  el.innerHTML = state.domains.map(d => `
-    <div class="tree-item ${state.selectedDomainId === d.id ? 'active' : ''}"
-         onclick="selectDomain('${d.id}')">
-      <div class="item-icon" style="background:rgba(41,128,185,.2);color:var(--color-domain)">📂</div>
-      <span style="flex:1">${d.name}</span>
-    </div>
-  `).join('') + `
-    <div class="tree-item" onclick="filterByType('');selectDomain(null)" style="margin-top:4px">
-      <div class="item-icon" style="background:rgba(79,142,247,.1);color:var(--accent)">🌐</div>
-      <span>全部概念</span>
-    </div>
-  `;
 }
 
-function fillDomainSelects() {
-  const opts = state.domains.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-  ['cf-domain-id', 'pf-domain-id', 'gf-domain-id'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<option value="">— 无 —</option>' + opts;
+function renderDomainSelects() {
+  const opts=state.domains.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const cd=el('concept-domain');
+  if(cd) cd.innerHTML=`<option value="">-- 无 --</option>${opts}`;
+  const sd=el('save-domain-sel');
+  if(sd) sd.innerHTML=`<option value="">-- 选择已有领域 --</option>${opts}<option value="__new__">＋ 新建领域</option>`;
+}
+
+function renderTwoSystems() {
+  ['active-elements','object-elements'].forEach(id=>{
+    const box=el(id); if(!box) return; box.innerHTML='';
+    ['subject','behavior','object','time','space'].forEach(type=>{
+      const p=document.createElement('span');
+      p.className='element-pill';
+      p.style.cssText=`background:${ELEM_COLORS[type]}22;color:${ELEM_COLORS[type]};border:1px solid ${ELEM_COLORS[type]}44`;
+      p.textContent=TYPE_LABELS[type];
+      p.onclick=()=>{ setTypeFilter(null,type); if(state.currentView!=='concepts') switchView('concepts'); };
+      box.appendChild(p);
+    });
   });
 }
 
-async function selectDomain(id) {
-  state.selectedDomainId = id;
-  renderDomainTree();
-  loadConcepts();
-}
-
-// ─── 概念列表 ─────────────────────────────────────────────
+// ══════════════════════════════════════════════
+//  概念列表
+// ══════════════════════════════════════════════
 async function loadConcepts() {
-  const params = new URLSearchParams();
-  if (state.selectedDomainId) params.set('domain_id', state.selectedDomainId);
-  if (state.typeFilter) params.set('element_type', state.typeFilter);
-
-  const { data } = await api(`/concepts?${params}`);
-  state.concepts = data;
+  let url='/api/concepts?';
+  if(state.currentDomainId) url+=`domain_id=${state.currentDomainId}&`;
+  if(state.filterType) url+=`element_type=${state.filterType}&`;
+  if(state.filterSystem) url+=`system_role=${state.filterSystem}&`;
+  const r=await api('GET',url);
+  state.concepts=r.data||[];
   renderConceptList();
-  fillConceptSelects();
 }
 
 function renderConceptList() {
-  const el = document.getElementById('concept-list');
-  const info = document.getElementById('list-info');
-  info.textContent = `共 ${state.concepts.length} 个概念`;
-
-  if (!state.concepts.length) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-title">暂无概念</div>
-      <div class="empty-desc">点击工具栏「新建概念」</div>
-    </div>`;
+  const list=el('concept-list');
+  el('concepts-count').textContent=`共 ${state.concepts.length} 个概念`;
+  if(!state.concepts.length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">暂无概念</div><div class="empty-desc">点击右上角"新增概念"开始</div></div>`;
     return;
   }
-
-  el.innerHTML = `<div class="concept-list">
-    ${state.concepts.map(c => `
-      <div class="concept-row ${state.selectedConcept?.id === c.id ? 'selected' : ''}"
-           onclick="selectConcept('${c.id}')">
-        ${typeBadge(c.element_type)}
-        <span class="concept-name">${c.name}</span>
-        ${c.alias ? `<span class="concept-meta">${c.alias}</span>` : ''}
-        <span class="concept-meta">${c.relation_count > 0 ? `🔗${c.relation_count}` : ''}</span>
-      </div>
-    `).join('')}
-  </div>`;
+  list.innerHTML=state.concepts.map(c=>`
+    <div class="concept-row${state.selectedConceptId===c.id?' selected':''}" onclick="selectConcept('${c.id}')">
+      ${typeBadge(c.element_type)}<span class="concept-name">${c.name}</span>
+      <span class="concept-meta">${SYS_LABELS[c.system_role]||''}</span>
+    </div>`).join('');
 }
 
-function fillConceptSelects() {
-  const opts = state.concepts.map(c =>
-    `<option value="${c.id}">[${TYPE_LABELS[c.element_type]}] ${c.name}</option>`
-  ).join('');
-  ['rf-source-id', 'rf-target-id'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<option value="">— 请选择 —</option>' + opts;
-  });
-}
-
-function filterByType(type) {
-  state.typeFilter = type;
-  // 更新 filter tab 状态
-  document.querySelectorAll('.filter-tab').forEach(t => {
-    t.classList.toggle('active', (t.dataset.type || '') === type);
-  });
-  loadConcepts();
-}
-
-function setTypeFilter(type, el) {
-  filterByType(type);
-}
-
-// ─── 概念详情 ─────────────────────────────────────────────
 async function selectConcept(id) {
-  const { data } = await api(`/concepts/${id}`);
-  state.selectedConcept = data;
-  renderConceptList(); // 更新选中态
-  renderDetail(data);
+  state.selectedConceptId=id; renderConceptList();
+  const r=await api('GET',`/api/concepts/${id}`);
+  const c=r.data; if(!c) return;
+  el('detail-panel-title').textContent='概念详情';
+  el('detail-edit-btn').style.display=''; el('detail-del-btn').style.display='';
+  const attrs=(c.attributes||[]).map(a=>`<div class="attr-item"><span class="attr-name">${a.name}</span><span class="attr-value">${a.value||'—'}</span><span class="attr-type-tag">${a.attr_type}</span></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted)">无属性</div>';
+  const rOut=(c.relations_out||[]).map(r=>`<span class="relation-chip" onclick="openRelDetail('${r.id}')">${r.relation_type} → ${r.target_name}</span>`).join('');
+  const rIn=(c.relations_in||[]).map(r=>`<span class="relation-chip" onclick="openRelDetail('${r.id}')">${r.source_name} → ${r.relation_type}</span>`).join('');
+  el('detail-content').innerHTML=`
+    <div class="detail-section"><div class="detail-label">名称</div><div class="detail-value" style="font-size:16px;font-weight:600">${c.name}</div>${c.alias?`<div style="font-size:12px;color:var(--text-muted);margin-top:4px">别名：${c.alias}</div>`:''}</div>
+    <div class="detail-section"><div class="detail-label">要素 / 系统</div><div class="detail-value">${typeBadge(c.element_type)} <span style="font-size:12px;color:var(--text-sec)">${SYS_LABELS[c.system_role]||''}</span></div></div>
+    <div class="detail-section"><div class="detail-label">所属领域</div><div class="detail-value">${c.domain_name||'—'}</div></div>
+    <div class="detail-section"><div class="detail-label">定义</div><div class="detail-value">${c.definition||'—'}</div></div>
+    <div class="detail-section"><div class="detail-label">属性（${(c.attributes||[]).length}）</div><div class="attr-list">${attrs}</div><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addAttrInline('${c.id}')">＋ 添加属性</button></div>
+    <div class="detail-section"><div class="detail-label">关联关系</div><div style="margin-bottom:6px">${rOut||'无出向关系'}</div><div>${rIn||'无入向关系'}</div><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="openModal('modal-relation','new',{source_id:'${c.id}'})">＋ 添加关系</button></div>
+    ${c.note?`<div class="detail-section"><div class="detail-label">备注</div><div class="detail-value">${c.note}</div></div>`:''}`;
 }
 
-function renderDetail(c) {
-  document.getElementById('detail-panel-title').textContent = c.name;
-  document.getElementById('edit-btn').style.display = 'inline-flex';
-  document.getElementById('delete-btn').style.display = 'inline-flex';
-
-  const panel = document.getElementById('detail-panel');
-  panel.innerHTML = `
-    <div class="detail-section">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        ${typeBadge(c.element_type)}
-        ${c.system_role ? `<span style="font-size:11px;color:var(--text-muted)">${SYSTEM_LABELS[c.system_role] || c.system_role}</span>` : ''}
-        ${c.is_universal ? '<span style="font-size:11px;color:var(--accent3)">🌐 通用本体</span>' : ''}
-      </div>
-      ${c.alias ? `<div style="font-size:12px;color:var(--text-sec);margin-bottom:4px">别名：${c.alias}</div>` : ''}
-      ${c.domain_name ? `<div style="font-size:12px;color:var(--text-muted)">领域：${c.domain_name}</div>` : ''}
-    </div>
-
-    ${c.definition ? `
-    <div class="detail-section">
-      <div class="detail-label">定义</div>
-      <div class="detail-value">${c.definition}</div>
-    </div>` : ''}
-
-    ${c.note ? `
-    <div class="detail-section">
-      <div class="detail-label">备注</div>
-      <div class="detail-value" style="color:var(--text-sec)">${c.note}</div>
-    </div>` : ''}
-
-    <div class="detail-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="detail-label">属性（${c.attributes.length}）</div>
-        <button class="btn btn-ghost btn-sm" onclick="openAttrModal('${c.id}')">+ 添加</button>
-      </div>
-      ${c.attributes.length ? `
-        <div class="attr-list">
-          ${c.attributes.map(a => `
-            <div class="attr-item">
-              <span class="attr-name">${a.name}</span>
-              <span class="attr-value">${a.value || '<em style="color:var(--text-muted)">—</em>'}</span>
-              <span class="attr-type-tag">${a.attr_type === 'base' ? '基础' : '领域'}</span>
-              <span onclick="deleteAttr('${c.id}','${a.id}')" style="cursor:pointer;color:var(--text-muted);font-size:12px;margin-left:4px">✕</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : `<div style="font-size:12px;color:var(--text-muted)">暂无属性</div>`}
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-label" style="margin-bottom:8px">出向关系（${c.relations_out.length}）</div>
-      ${c.relations_out.map(r => `
-        <div class="relation-chip" onclick="selectConcept('${r.target_id}')">
-          <span style="color:var(--accent)">${r.relation_type}</span>
-          <span>→</span>
-          <span>${r.target_name}</span>
-          ${typeBadge(r.target_type)}
-          <span onclick="event.stopPropagation();deleteRelation('${r.id}','${c.id}')" style="color:var(--text-muted);margin-left:4px">✕</span>
-        </div>
-      `).join('') || '<span style="font-size:12px;color:var(--text-muted)">无</span>'}
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-label" style="margin-bottom:8px">入向关系（${c.relations_in.length}）</div>
-      ${c.relations_in.map(r => `
-        <div class="relation-chip" onclick="selectConcept('${r.source_id}')">
-          ${typeBadge(r.source_type)}
-          <span>${r.source_name}</span>
-          <span>→</span>
-          <span style="color:var(--accent)">${r.relation_type}</span>
-          <span onclick="event.stopPropagation();deleteRelation('${r.id}','${c.id}')" style="color:var(--text-muted);margin-left:4px">✕</span>
-        </div>
-      `).join('') || '<span style="font-size:12px;color:var(--text-muted)">无</span>'}
-    </div>
-  `;
+function editSelected(){const c=state.concepts.find(x=>x.id===state.selectedConceptId); if(c) openModal('modal-concept','edit',c);}
+async function deleteSelected(){
+  if(!state.selectedConceptId||!confirm('确定删除该概念？')) return;
+  await api('DELETE',`/api/concepts/${state.selectedConceptId}`);
+  state.selectedConceptId=null;
+  el('detail-content').innerHTML=`<div class="empty-state"><div class="empty-icon">👆</div><div class="empty-title">选择一个概念查看详情</div></div>`;
+  el('detail-edit-btn').style.display='none'; el('detail-del-btn').style.display='none';
+  toast('概念已删除','success'); loadConcepts();
 }
-
-// ─── 编辑 / 删除 ──────────────────────────────────────────
-function editSelected() {
-  if (!state.selectedConcept) return;
-  const c = state.selectedConcept;
-  state.editingConceptId = c.id;
-  document.getElementById('concept-modal-title').textContent = '编辑概念';
-  document.getElementById('cf-name').value = c.name;
-  document.getElementById('cf-alias').value = c.alias || '';
-  document.getElementById('cf-element-type').value = c.element_type;
-  document.getElementById('cf-system-role').value = c.system_role || 'universal';
-  document.getElementById('cf-domain-id').value = c.domain_id || '';
-  document.getElementById('cf-definition').value = c.definition || '';
-  document.getElementById('cf-note').value = c.note || '';
-  document.getElementById('cf-universal').checked = !!c.is_universal;
-  openModal('concept-modal');
+function setTypeFilter(btn, type){
+  state.filterType=type;
+  document.querySelectorAll('#filter-tabs .filter-tab').forEach(b=>b.classList.remove('active'));
+  const tgt=btn||document.querySelector(`#filter-tabs [data-type="${type}"]`);
+  if(tgt) tgt.classList.add('active'); loadConcepts();
 }
+function applyFilter(){state.filterSystem=el('filter-system').value; loadConcepts();}
 
-async function deleteSelected() {
-  if (!state.selectedConcept) return;
-  if (!confirm(`确认删除概念「${state.selectedConcept.name}」？\n关联的属性和关系也将删除。`)) return;
-  await api(`/concepts/${state.selectedConcept.id}`, { method: 'DELETE' });
-  toast(`已删除「${state.selectedConcept.name}」`);
-  state.selectedConcept = null;
-  document.getElementById('detail-panel').innerHTML = '<div class="empty-state"><div class="empty-title">已删除</div></div>';
-  document.getElementById('edit-btn').style.display = 'none';
-  document.getElementById('delete-btn').style.display = 'none';
-  loadConcepts();
+// 全局搜索
+let searchTimer=null;
+async function onGlobalSearch(q){
+  clearTimeout(searchTimer); const box=el('search-results');
+  if(!q.trim()){box.style.display='none'; return;}
+  searchTimer=setTimeout(async()=>{
+    const r=await api('GET',`/api/concepts?q=${encodeURIComponent(q)}`);
+    const items=(r.data||[]).slice(0,10);
+    if(!items.length){box.style.display='none'; return;}
+    box.innerHTML=items.map(c=>`<div class="search-result-item" onclick="jumpToConcept('${c.id}')">${typeBadge(c.element_type)}<span>${c.name}</span></div>`).join('');
+    box.style.display='block';
+  },200);
 }
-
-async function deleteAttr(conceptId, attrId) {
-  await api(`/concepts/${conceptId}/attributes/${attrId}`, { method: 'DELETE' });
-  selectConcept(conceptId);
+function jumpToConcept(id){
+  el('search-results').style.display='none'; el('global-search').value='';
+  switchView('concepts'); state.currentDomainId=null; renderDomainTree();
+  loadConcepts().then(()=>selectConcept(id));
 }
+document.addEventListener('click',e=>{if(!e.target.closest('.search-box')) el('search-results').style.display='none';});
 
-async function deleteRelation(relId, conceptId) {
-  await api(`/relations/${relId}`, { method: 'DELETE' });
-  toast('关系已删除');
-  selectConcept(conceptId);
-  loadConcepts();
-}
-
-// ─── 新建/编辑概念 Modal ───────────────────────────────────
-function openConceptModal() {
-  state.editingConceptId = null;
-  document.getElementById('concept-modal-title').textContent = '新建概念';
-  ['cf-name','cf-alias','cf-definition','cf-note'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('cf-element-type').value = 'subject';
-  document.getElementById('cf-system-role').value = 'universal';
-  document.getElementById('cf-domain-id').value = state.selectedDomainId || '';
-  document.getElementById('cf-universal').checked = false;
-  openModal('concept-modal');
-}
-
-async function saveConcept() {
-  const body = {
-    name: document.getElementById('cf-name').value.trim(),
-    alias: document.getElementById('cf-alias').value.trim(),
-    element_type: document.getElementById('cf-element-type').value,
-    system_role: document.getElementById('cf-system-role').value,
-    domain_id: document.getElementById('cf-domain-id').value || null,
-    definition: document.getElementById('cf-definition').value.trim(),
-    note: document.getElementById('cf-note').value.trim(),
-    is_universal: document.getElementById('cf-universal').checked,
-  };
-  if (!body.name) return toast('名称不能为空', 'error');
-
-  try {
-    if (state.editingConceptId) {
-      await api(`/concepts/${state.editingConceptId}`, { method: 'PUT', body });
-      toast('概念已更新');
-    } else {
-      await api('/concepts', { method: 'POST', body });
-      toast('概念已创建');
-    }
-    closeModal('concept-modal');
-    loadConcepts();
-    if (state.editingConceptId) selectConcept(state.editingConceptId);
-  } catch (e) { toast(e.message, 'error'); }
-}
-
-// ─── 属性 Modal ───────────────────────────────────────────
-let _attrConceptId = null;
-
-function openAttrModal(conceptId) {
-  _attrConceptId = conceptId;
-  ['af-name','af-value','af-note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('af-attr-type').value = 'domain';
-  document.getElementById('af-data-type').value = 'string';
-  openModal('attr-modal');
-}
-
-async function saveAttr() {
-  const body = {
-    name: document.getElementById('af-name').value.trim(),
-    value: document.getElementById('af-value').value.trim(),
-    attr_type: document.getElementById('af-attr-type').value,
-    data_type: document.getElementById('af-data-type').value,
-    note: document.getElementById('af-note').value.trim(),
-  };
-  if (!body.name) return toast('属性名称不能为空', 'error');
-  try {
-    await api(`/concepts/${_attrConceptId}/attributes`, { method: 'POST', body });
-    toast('属性已添加');
-    closeModal('attr-modal');
-    selectConcept(_attrConceptId);
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-// ─── 关系 Modal ───────────────────────────────────────────
-function openRelationModal() {
-  ['rf-label','rf-note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('rf-relation-type').value = '';
-  if (state.selectedConcept) {
-    document.getElementById('rf-source-id').value = state.selectedConcept.id;
+// ══════════════════════════════════════════════
+//  CRUD Modal
+// ══════════════════════════════════════════════
+function openModal(modalId, mode, data={}) {
+  el(modalId).classList.add('open');
+  if(modalId==='modal-concept'){
+    el('modal-concept-title').textContent=mode==='edit'?'编辑概念':'新增概念';
+    el('concept-id').value=data.id||''; el('concept-name').value=data.name||'';
+    el('concept-alias').value=data.alias||''; el('concept-type').value=data.element_type||'subject';
+    el('concept-system').value=data.system_role||'universal';
+    const cd=el('concept-domain');
+    if(cd){ renderDomainSelects(); cd.value=data.domain_id||state.currentDomainId||''; }
+    el('concept-def').value=data.definition||''; el('concept-note').value=data.note||'';
+  } else if(modalId==='modal-relation'){
+    el('modal-relation-title').textContent=mode==='edit'?'编辑关系':'新增关系';
+    el('relation-id').value=data.id||'';
+    renderRelConceptOptions(data.source_id, data.target_id);
+    if(data.relation_type) el('relation-type').value=data.relation_type;
+    el('relation-kind').value=data.rel_kind||'static';
+    el('relation-label').value=data.label||''; el('relation-note').value=data.note||'';
+    el('rel-delete-btn').style.display=mode==='edit'?'':'none';
+  } else if(modalId==='modal-domain'){
+    el('modal-domain-title').textContent=mode==='edit'?'编辑领域':'新建领域';
+    el('domain-id').value=data.id||''; el('domain-name').value=data.name||''; el('domain-desc').value=data.description||'';
   }
-  openModal('relation-modal');
+}
+function closeModal(id){el(id).classList.remove('open');}
+
+async function saveConcept(){
+  const id=el('concept-id').value;
+  const body={name:el('concept-name').value.trim(),alias:el('concept-alias').value.trim(),element_type:el('concept-type').value,system_role:el('concept-system').value,domain_id:el('concept-domain').value||null,definition:el('concept-def').value.trim(),note:el('concept-note').value.trim()};
+  if(!body.name){toast('名称不能为空','error'); return;}
+  if(id) await api('PUT',`/api/concepts/${id}`,body); else await api('POST','/api/concepts',body);
+  closeModal('modal-concept'); toast(id?'概念已更新':'概念已创建','success'); loadConcepts(); if(id) selectConcept(id);
+}
+async function saveRelation(){
+  const id=el('relation-id').value;
+  const body={source_id:el('relation-source').value,target_id:el('relation-target').value,relation_type:el('relation-type').value,rel_kind:el('relation-kind').value,label:el('relation-label').value.trim(),note:el('relation-note').value.trim(),domain_id:state.currentDomainId||null};
+  if(!body.source_id||!body.target_id){toast('发起方和目标方不能为空','error'); return;}
+  if(id) await api('PUT',`/api/relations/${id}`,body); else await api('POST','/api/relations',body);
+  closeModal('modal-relation'); toast(id?'关系已更新':'关系已创建','success');
+  if(state.selectedConceptId) selectConcept(state.selectedConceptId);
+  if(state.currentView==='graph') loadGraph();
+}
+async function deleteRelation(){
+  const id=el('relation-id').value;
+  if(!id||!confirm('确定删除此关系？')) return;
+  await api('DELETE',`/api/relations/${id}`); closeModal('modal-relation'); toast('关系已删除','success');
+  if(state.selectedConceptId) selectConcept(state.selectedConceptId);
+  if(state.currentView==='graph') loadGraph();
+}
+async function saveDomain(){
+  const id=el('domain-id').value;
+  const body={name:el('domain-name').value.trim(),description:el('domain-desc').value.trim()};
+  if(!body.name){toast('领域名称不能为空','error'); return;}
+  if(id) await api('PUT',`/api/domains/${id}`,body); else await api('POST','/api/domains',body);
+  closeModal('modal-domain'); toast(id?'领域已更新':'领域已创建','success'); loadDomains();
 }
 
-async function saveRelation() {
-  const body = {
-    source_id: document.getElementById('rf-source-id').value,
-    target_id: document.getElementById('rf-target-id').value,
-    relation_type: document.getElementById('rf-relation-type').value,
-    label: document.getElementById('rf-label').value.trim(),
-    note: document.getElementById('rf-note').value.trim(),
-    domain_id: state.selectedDomainId,
-  };
-  if (!body.source_id || !body.target_id || !body.relation_type) {
-    return toast('请填写完整的关系信息', 'error');
+function renderRelConceptOptions(srcId, tgtId){
+  const RTYPES=['分类','包含','实施','利用','在','确认','提出','制定','表现','解决','实现','依据','参考','输入','输出','集约','前置'];
+  const rs=el('relation-source'), rt=el('relation-target'), rtype=el('relation-type');
+  if(!rs||!rt) return;
+  const opts=state.concepts.map(c=>`<option value="${c.id}">${c.name} (${TYPE_LABELS[c.element_type]||c.element_type})</option>`).join('');
+  rs.innerHTML=opts; rt.innerHTML=opts;
+  if(srcId) rs.value=srcId; if(tgtId) rt.value=tgtId;
+  if(rtype&&!rtype.options.length) rtype.innerHTML=RTYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+async function openRelDetail(relId){
+  const r=await api('GET',`/api/relations/${relId}`);
+  if(r.data) openModal('modal-relation','edit',r.data);
+}
+async function addAttrInline(cid){
+  const name=prompt('属性名称：'); if(!name) return;
+  const value=prompt('属性值：');
+  await api('POST',`/api/concepts/${cid}/attributes`,{name,value,attr_type:'domain'});
+  selectConcept(cid);
+}
+
+// ══════════════════════════════════════════════
+//  D3 关系图谱
+// ══════════════════════════════════════════════
+async function loadGraph(){
+  let url='/api/relations/graph?limit=300';
+  if(state.currentDomainId) url+=`&domain_id=${state.currentDomainId}`;
+  const r=await api('GET',url);
+  state.graphNodes=(r.nodes||[]).map(n=>({...n}));
+  state.graphEdges=(r.edges||[]).map(e=>({...e}));
+  el('graph-info').textContent=`${state.graphNodes.length} 个节点 · ${state.graphEdges.length} 条关系`;
+  renderGraph();
+}
+
+function renderGraph(){
+  const svg=d3.select('#graph-svg'); svg.selectAll('*').remove();
+  if(!state.graphNodes.length){
+    svg.append('text').attr('x','50%').attr('y','50%').attr('text-anchor','middle').style('fill','var(--text-muted)').style('font-size','14px').text('当前领域暂无数据'); return;
   }
-  try {
-    await api('/relations', { method: 'POST', body });
-    toast('关系已添加');
-    closeModal('relation-modal');
-    if (state.selectedConcept) selectConcept(state.selectedConcept.id);
-    loadConcepts();
-    if (state.currentView === 'graph') loadGraph();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-// ─── 领域 Modal ───────────────────────────────────────────
-function openDomainModal() {
-  document.getElementById('df-name').value = '';
-  document.getElementById('df-description').value = '';
-  openModal('domain-modal');
-}
-
-async function saveDomain() {
-  const body = {
-    name: document.getElementById('df-name').value.trim(),
-    description: document.getElementById('df-description').value.trim(),
-  };
-  if (!body.name) return toast('领域名称不能为空', 'error');
-  try {
-    await api('/domains', { method: 'POST', body });
-    toast('领域已创建');
-    closeModal('domain-modal');
-    loadDomains();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-// ─── 问题/目标 ────────────────────────────────────────────
-async function loadProblems() {
-  const [proRes, goalRes] = await Promise.all([
-    api('/problems'),
-    api('/problems/goals'),
-  ]);
-  renderProblems(proRes.data, goalRes.data);
-}
-
-function renderProblems(problems, goals) {
-  const el = document.getElementById('problems-list');
-  const levelOrder = { phenomenon: 0, root: 1, crux: 2 };
-  const sorted = [...problems].sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
-
-  el.innerHTML = `
-    <div style="margin-bottom:20px">
-      <div class="section-title">🔴 问题层级（三层结构）</div>
-      ${sorted.length ? sorted.map(p => `
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer"
-             onclick="showProblemDetail('${p.id}')">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span class="badge level-${p.level}" style="background:rgba(0,0,0,.2)">
-              ${LEVEL_LABELS[p.level] || p.level}
-            </span>
-            <span style="font-size:13px;font-weight:500">${p.name}</span>
-            ${p.domain_name ? `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${p.domain_name}</span>` : ''}
-          </div>
-          ${p.description ? `<div style="font-size:12px;color:var(--text-sec);line-height:1.5">${p.description}</div>` : ''}
-        </div>
-      `).join('') : '<div style="font-size:13px;color:var(--text-muted)">暂无问题</div>'}
-    </div>
-    <div>
-      <div class="section-title">🎯 目标</div>
-      ${goals.length ? goals.map(g => `
-        <div style="background:var(--bg-card);border:1px solid rgba(39,174,96,.3);border-radius:8px;padding:12px 14px;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="color:var(--color-goal);font-size:13px;font-weight:500">🎯 ${g.name}</span>
-            ${g.domain_name ? `<span style="font-size:11px;color:var(--text-muted);margin-left:auto">${g.domain_name}</span>` : ''}
-          </div>
-          ${g.indicator ? `<div style="font-size:12px;color:var(--accent3)">指标：${g.indicator}</div>` : ''}
-          ${g.problem_name ? `<div style="font-size:12px;color:var(--text-muted)">解决：${g.problem_name}</div>` : ''}
-        </div>
-      `).join('') : '<div style="font-size:13px;color:var(--text-muted)">暂无目标</div>'}
-    </div>
-  `;
-}
-
-function openProblemModal() {
-  ['pf-name','pf-description'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('pf-level').value = 'phenomenon';
-  document.getElementById('pf-domain-id').value = state.selectedDomainId || '';
-  openModal('problem-modal');
-}
-
-async function saveProblem() {
-  const body = {
-    name: document.getElementById('pf-name').value.trim(),
-    level: document.getElementById('pf-level').value,
-    description: document.getElementById('pf-description').value.trim(),
-    domain_id: document.getElementById('pf-domain-id').value || null,
-  };
-  if (!body.name || !body.level) return toast('名称和层级不能为空', 'error');
-  try {
-    await api('/problems', { method: 'POST', body });
-    toast('问题已创建');
-    closeModal('problem-modal');
-    loadProblems();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-function openGoalModal() {
-  ['gf-name','gf-indicator','gf-description'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('gf-domain-id').value = state.selectedDomainId || '';
-  openModal('goal-modal');
-}
-
-async function saveGoal() {
-  const body = {
-    name: document.getElementById('gf-name').value.trim(),
-    indicator: document.getElementById('gf-indicator').value.trim(),
-    description: document.getElementById('gf-description').value.trim(),
-    problem_id: document.getElementById('gf-problem-id').value || null,
-    domain_id: document.getElementById('gf-domain-id').value || null,
-  };
-  if (!body.name) return toast('目标名称不能为空', 'error');
-  try {
-    await api('/problems/goals', { method: 'POST', body });
-    toast('目标已创建');
-    closeModal('goal-modal');
-    loadProblems();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-// ─── D3 力导向图 ──────────────────────────────────────────
-let simulation, zoom_behavior;
-
-async function loadGraph() {
-  const params = state.selectedDomainId ? `?domain_id=${state.selectedDomainId}` : '';
-  const { nodes, edges } = await api(`/relations/graph${params}`);
-  renderGraph(nodes, edges);
-}
-
-function renderGraph(nodes, edges) {
-  const svg = d3.select('#graph-svg');
-  svg.selectAll('*').remove();
-
-  const container = document.getElementById('graph-view');
-  // 强制刷新布局以获取正确的宽高
-  container.style.visibility = 'hidden';
-  container.style.display = 'flex';
-  void container.offsetWidth;
-  container.style.visibility = '';
-
-  const W = container.clientWidth || 800;
-  const H = container.clientHeight || 600;
-
-  // 设置SVG显式宽高，防止display:none时宽高为0
-  svg.attr('width', W).attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
-
-  const colorMap = {
-    subject: '#4f8ef7', behavior: '#7c5cbf', object: '#2ea98b',
-    time: '#e0994a', space: '#e05252', problem: '#c0392b',
-    goal: '#27ae60', indicator: '#8e44ad'
-  };
-
-  // 缩放行为
-  const g = svg.append('g');
-  zoom_behavior = d3.zoom().scaleExtent([.1, 3]).on('zoom', e => {
-    g.attr('transform', e.transform);
+  const W=el('graph-svg').clientWidth||800, H=el('graph-svg').clientHeight||600;
+  // markers
+  const defs=svg.append('defs');
+  Object.entries(ELEM_COLORS).forEach(([t,c])=>{
+    defs.append('marker').attr('id','arr-'+t).attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',7).attr('markerHeight',7).attr('orient','auto')
+      .append('path').attr('d','M0,-5L10,0L0,5').attr('fill',c).attr('opacity',0.7);
   });
-  svg.call(zoom_behavior);
-
-  // 箭头标记
-  const defs = svg.append('defs');
-  Object.entries(colorMap).forEach(([type, color]) => {
-    defs.append('marker')
-      .attr('id', `arrow-${type}`)
-      .attr('viewBox', '0 -5 10 10')
-      .attr('refX', 20)
-      .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
-      .attr('orient', 'auto')
-      .append('path')
-      .attr('fill', color)
-      .attr('d', 'M0,-5L10,0L0,5');
-  });
-
-  // 力模拟
-  simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(edges).id(d => d.id).distance(120))
-    .force('charge', d3.forceManyBody().strength(-300))
-    .force('center', d3.forceCenter(W / 2, H / 2))
-    .force('collision', d3.forceCollide(40));
+  const g=svg.append('g');
+  state.graphZoomBehavior=d3.zoom().scaleExtent([0.1,3]).on('zoom',e=>g.attr('transform',e.transform));
+  svg.call(state.graphZoomBehavior);
 
   // 边
-  const link = g.append('g').selectAll('line')
-    .data(edges).join('line')
-    .attr('stroke', d => {
-      const sourceNode = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source_id);
-      return colorMap[sourceNode?.element_type] || '#4a5568';
-    })
-    .attr('stroke-width', 1.5)
-    .attr('stroke-opacity', .6)
-    .attr('marker-end', d => {
-      const sourceNode = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source_id);
-      return `url(#arrow-${sourceNode?.element_type || 'subject'})`;
-    });
+  const link=g.append('g').selectAll('line').data(state.graphEdges).join('line')
+    .attr('stroke',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id); return s?(ELEM_COLORS[s.element_type]||'#4f8ef7'):'#4f8ef7'; })
+    .attr('stroke-opacity',0.45).attr('stroke-width',1.5)
+    .attr('marker-end',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id); return `url(#arr-${s?s.element_type:'subject'})`; })
+    .style('cursor','pointer')
+    .on('click',(ev,d)=>{ ev.stopPropagation(); selectGraphEdge(d); })
+    .on('dblclick',(ev,d)=>{ ev.stopPropagation(); editGraphEdge(d); });
+
   // 边标签
-  const linkLabel = g.append('g').selectAll('text')
-    .data(edges).join('text')
-    .attr('fill', '#8892b0')
-    .attr('font-size', 10)
-    .attr('text-anchor', 'middle')
-    .text(d => d.relation_type);
+  const linkLabel=g.append('g').selectAll('text').data(state.graphEdges).join('text')
+    .attr('font-size',9).attr('fill','var(--text-muted)').attr('text-anchor','middle')
+    .style('pointer-events','none').style('display',state.showGraphLabels?'':'none')
+    .text(d=>d.relation_type);
 
-  // 节点组
-  const node = g.append('g').selectAll('g')
-    .data(nodes).join('g')
+  // 节点
+  const node=g.append('g').selectAll('g').data(state.graphNodes).join('g')
+    .style('cursor','pointer')
     .call(d3.drag()
-      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
-      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
-      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
-    )
-    .on('click', (e, d) => {
-      switchView('ontology');
-      setTimeout(() => selectConcept(d.id), 100);
+      .on('start',(e,d)=>{ if(!e.active) state.graphSimulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag',(e,d)=>{ d.fx=e.x; d.fy=e.y; })
+      .on('end',(e,d)=>{ if(!e.active) state.graphSimulation.alphaTarget(0); d.fx=null; d.fy=null; }))
+    .on('click',(ev,d)=>{ ev.stopPropagation(); selectGraphNode(d); })
+    .on('dblclick',(ev,d)=>{ ev.stopPropagation(); editGraphNode(d); });
+  node.append('circle').attr('r',d=>d.is_universal?14:10)
+    .attr('fill',d=>(ELEM_COLORS[d.element_type]||'#4f8ef7')+'33')
+    .attr('stroke',d=>ELEM_COLORS[d.element_type]||'#4f8ef7').attr('stroke-width',2);
+  node.append('text').attr('dy',4).attr('text-anchor','middle').attr('font-size',10).attr('fill','var(--text-pri)').style('pointer-events','none')
+    .text(d=>d.name.length>6?d.name.slice(0,5)+'…':d.name);
+
+  svg.on('click',()=>{ closeGraphDetail(); clearGraphSel(); });
+
+  state.graphSimulation=d3.forceSimulation(state.graphNodes)
+    .force('link',d3.forceLink(state.graphEdges.map(e=>({
+      source:state.graphNodes.findIndex(n=>n.id===e.source_id),
+      target:state.graphNodes.findIndex(n=>n.id===e.target_id)
+    }))).distance(100).id((d,i)=>i))
+    .force('charge',d3.forceManyBody().strength(-180))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide(24))
+    .on('tick',()=>{
+      link.attr('x1',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id); return s?s.x:0; })
+          .attr('y1',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id); return s?s.y:0; })
+          .attr('x2',d=>{ const t=state.graphNodes.find(n=>n.id===d.target_id); return t?t.x:0; })
+          .attr('y2',d=>{ const t=state.graphNodes.find(n=>n.id===d.target_id); return t?t.y:0; });
+      linkLabel.attr('x',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id),t=state.graphNodes.find(n=>n.id===d.target_id); return s&&t?(s.x+t.x)/2:0; })
+               .attr('y',d=>{ const s=state.graphNodes.find(n=>n.id===d.source_id),t=state.graphNodes.find(n=>n.id===d.target_id); return s&&t?(s.y+t.y)/2-4:0; });
+      node.attr('transform',d=>`translate(${d.x||0},${d.y||0})`);
     });
+}
 
-  node.append('circle')
-    .attr('r', d => d.is_universal ? 22 : 16)
-    .attr('fill', d => colorMap[d.element_type] || '#4a5568')
-    .attr('fill-opacity', .15)
-    .attr('stroke', d => colorMap[d.element_type] || '#4a5568')
-    .attr('stroke-width', d => d.is_universal ? 2.5 : 1.5);
+async function selectGraphNode(d){
+  state.graphSelectedId=d.id; state.graphSelectedType='node';
+  d3.selectAll('circle').attr('stroke-width',2).style('filter','none');
+  d3.selectAll('.graph-node').filter(nd=>nd.id===d.id).select('circle')
+    .attr('stroke-width',3).style('filter','drop-shadow(0 0 6px rgba(79,142,247,.8))');
+  const gdp=el('gdp');
+  el('gdp-title').innerHTML=`${typeBadge(d.element_type)} ${d.name}`;
+  el('gdp-edit-btn').onclick=()=>editGraphNode(d);
+  const r=await api('GET',`/api/concepts/${d.id}`);
+  const c=r.data||d;
+  let html=`<div class="gdl">要素类型</div><div class="gdv">${TYPE_LABELS[d.element_type]||d.element_type}</div>`;
+  html+=`<div class="gdl">所属系统</div><div class="gdv">${SYS_LABELS[d.system_role]||d.system_role||'—'}</div>`;
+  if(c.definition) html+=`<div class="gdl">定义</div><div class="gdv">${c.definition}</div>`;
+  if(c.alias) html+=`<div class="gdl">别名</div><div class="gdv">${c.alias}</div>`;
+  if(c.domain_name) html+=`<div class="gdl">领域</div><div class="gdv">${c.domain_name}</div>`;
+  const rc=((c.relations_out||[]).length+(c.relations_in||[]).length);
+  html+=`<div class="gdl">关系数</div><div class="gdv">${rc}</div>`;
+  if((c.relations_out||[]).length){
+    html+=`<div class="gdl">出向关系</div><div class="gdv">`;
+    html+=(c.relations_out||[]).slice(0,5).map(rv=>`<span class="relation-chip" onclick="showEdgeDetail('${rv.id}')">${rv.relation_type}→${rv.target_name}</span>`).join('');
+    html+='</div>';
+  }
+  if(c.note) html+=`<div class="gdl">备注</div><div class="gdv">${c.note}</div>`;
+  el('gdp-body').innerHTML=html; gdp.style.display='flex';
+}
 
-  node.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dy', '0.35em')
-    .attr('fill', '#e8eaf6')
-    .attr('font-size', d => d.name.length > 6 ? 10 : (d.name.length > 4 ? 11 : 12))
-    .text(d => d.name.length > 8 ? d.name.slice(0, 7) + '…' : d.name);
+async function selectGraphEdge(d){
+  state.graphSelectedId=d.id; state.graphSelectedType='edge';
+  d3.selectAll('line').attr('stroke-width',1.5).attr('stroke-opacity',0.45);
+  d3.selectAll('line').filter(ed=>ed.id===d.id).attr('stroke-width',3).attr('stroke-opacity',1);
+  const gdp=el('gdp');
+  const sn=state.graphNodes.find(n=>n.id===d.source_id), tn=state.graphNodes.find(n=>n.id===d.target_id);
+  el('gdp-title').textContent=`关系：${d.relation_type}`;
+  el('gdp-edit-btn').onclick=()=>editGraphEdge(d);
+  let html=`<div class="gdl">发起方</div><div class="gdv">${sn?sn.name:d.source_name||d.source_id}</div>`;
+  html+=`<div class="gdl">关系类型</div><div class="gdv" style="color:var(--accent)">${d.relation_type}</div>`;
+  html+=`<div class="gdl">目标方</div><div class="gdv">${tn?tn.name:d.target_name||d.target_id}</div>`;
+  if(d.rel_kind) html+=`<div class="gdl">类别</div><div class="gdv">${d.rel_kind==='dynamic'?'动态':'静态'}</div>`;
+  if(d.label) html+=`<div class="gdl">标签</div><div class="gdv">${d.label}</div>`;
+  if(d.note) html+=`<div class="gdl">备注</div><div class="gdv">${d.note}</div>`;
+  el('gdp-body').innerHTML=html; gdp.style.display='flex';
+}
 
-  // Tooltip
-  const tooltip = document.getElementById('graph-tooltip');
-  node
-    .on('mouseover', (e, d) => {
-      tooltip.style.display = 'block';
-      tooltip.innerHTML = `<strong>${d.name}</strong><br>${TYPE_LABELS[d.element_type] || d.element_type}`;
-    })
-    .on('mousemove', e => {
-      const rect = container.getBoundingClientRect();
-      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-      tooltip.style.top = (e.clientY - rect.top + 12) + 'px';
-    })
-    .on('mouseleave', () => { tooltip.style.display = 'none'; });
+async function showEdgeDetail(relId){
+  const r=await api('GET',`/api/relations/${relId}`);
+  if(r.data) selectGraphEdge(r.data);
+}
+function closeGraphDetail(){
+  el('gdp').style.display='none'; state.graphSelectedId=null; clearGraphSel();
+}
+function clearGraphSel(){
+  d3.selectAll('circle').attr('stroke-width',2).style('filter','none');
+  d3.selectAll('line').attr('stroke-width',1.5).attr('stroke-opacity',0.45);
+}
+function editGraphNode(d){
+  const c=state.concepts.find(x=>x.id===d.id)||d; openModal('modal-concept','edit',c);
+}
+async function editGraphEdge(d){
+  const r=await api('GET',`/api/relations/${d.id}`);
+  if(r.data) openModal('modal-relation','edit',r.data);
+}
+function editGraphSelected(){
+  if(!state.graphSelectedId) return;
+  if(state.graphSelectedType==='node'){
+    const d=state.graphNodes.find(n=>n.id===state.graphSelectedId); if(d) editGraphNode(d);
+  } else {
+    const d=state.graphEdges.find(e=>e.id===state.graphSelectedId); if(d) editGraphEdge(d);
+  }
+}
+function graphZoom(f){
+  if(state.graphZoomBehavior) d3.select('#graph-svg').transition().duration(300).call(state.graphZoomBehavior.scaleBy,f);
+}
+function resetGraphZoom(){
+  if(state.graphZoomBehavior) d3.select('#graph-svg').transition().duration(400).call(state.graphZoomBehavior.transform,d3.zoomIdentity);
+}
+function toggleGraphLabels(){
+  state.showGraphLabels=!state.showGraphLabels;
+  d3.selectAll('#graph-svg text').style('display',state.showGraphLabels?'':'none');
+  const btn=document.getElementById('lbl-btn');
+  if(btn) btn.style.color=state.showGraphLabels?'var(--accent)':'';
+}
 
-  simulation.on('tick', () => {
-    link
-      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-    linkLabel
-      .attr('x', d => (d.source.x + d.target.x) / 2)
-      .attr('y', d => (d.source.y + d.target.y) / 2 - 4);
-    node.attr('transform', d => `translate(${d.x},${d.y})`);
+// ══════════════════════════════════════════════
+//  仪表盘
+// ══════════════════════════════════════════════
+async function loadDashboard(){
+  const [cr,rr]=await Promise.all([api('GET','/api/concepts'),api('GET','/api/relations')]);
+  const concepts=cr.data||[], relations=rr.data||[];
+  el('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-value">${concepts.length}</div><div class="stat-label">概念总数</div></div>
+    <div class="stat-card"><div class="stat-value">${relations.length}</div><div class="stat-label">关系总数</div></div>
+    <div class="stat-card"><div class="stat-value">${state.domains.length}</div><div class="stat-label">领域数</div></div>
+    <div class="stat-card"><div class="stat-value">${concepts.filter(c=>c.is_universal).length}</div><div class="stat-label">通用本体</div></div>`;
+  const byType={};
+  for(const c of concepts) byType[c.element_type]=(byType[c.element_type]||0)+1;
+  const max=Math.max(1,...Object.values(byType));
+  const bars=el('type-bars'); bars.innerHTML='';
+  ['subject','behavior','object','time','space','problem','goal','indicator'].forEach(t=>{
+    const cnt=byType[t]||0, color=ELEM_COLORS[t]||'#888';
+    const row=document.createElement('div'); row.className='type-bar-row';
+    row.innerHTML=`<span class="type-bar-label">${TYPE_LABELS[t]}</span><div class="type-bar-track"><div class="type-bar-fill" style="width:${cnt/max*100}%;background:${color}"></div></div><span class="type-bar-count">${cnt}</span>`;
+    bars.appendChild(row);
   });
 }
 
-function resetZoom() {
-  d3.select('#graph-svg').transition().duration(500).call(
-    zoom_behavior.transform,
-    d3.zoomIdentity
-  );
+// ══════════════════════════════════════════════
+//  本体建模：五步骤
+// ══════════════════════════════════════════════
+function resetModeling(){
+  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0};
+  el('file-input').value=''; el('paste-text').value=''; el('upload-status').textContent='';
+  el('preview-md').value=''; el('preview-chars').textContent='0';
+  el('file-name-badge').style.display='none';
+  gotoMStep(0);
 }
-
-// ─── 仪表盘 ───────────────────────────────────────────────
-async function loadDashboard() {
-  const { totals, by_element_type, by_system_role, recent_concepts } = await api('/stats');
-  const maxCount = Math.max(...by_element_type.map(t => t.n), 1);
-  const colorMap = {
-    subject: 'var(--color-subject)', behavior: 'var(--color-behavior)',
-    object: 'var(--color-object)', time: 'var(--color-time)',
-    space: 'var(--color-space)', problem: 'var(--color-problem)',
-    goal: 'var(--color-goal)', indicator: 'var(--color-indicator)'
-  };
-
-  document.getElementById('dashboard-view').innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-value">${totals.concepts}</div><div class="stat-label">知识本体概念</div></div>
-      <div class="stat-card"><div class="stat-value">${totals.relations}</div><div class="stat-label">概念关系</div></div>
-      <div class="stat-card"><div class="stat-value">${totals.domains}</div><div class="stat-label">领域</div></div>
-      <div class="stat-card"><div class="stat-value">${totals.problems}</div><div class="stat-label">问题</div></div>
-      <div class="stat-card"><div class="stat-value">${totals.goals}</div><div class="stat-label">目标</div></div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div class="section-title">五要素分布</div>
-        <div class="element-type-bars">
-          ${by_element_type.map(t => `
-            <div class="type-bar-row">
-              <div class="type-bar-label">${TYPE_LABELS[t.element_type] || t.element_type}</div>
-              <div class="type-bar-track">
-                <div class="type-bar-fill" style="width:${Math.round(t.n/maxCount*100)}%;background:${colorMap[t.element_type]||'#4a5568'}"></div>
-              </div>
-              <div class="type-bar-count">${t.n}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div class="section-title">最近创建的概念</div>
-        ${recent_concepts.map(c => `
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer"
-               onclick="switchView('ontology');setTimeout(()=>selectConcept('${c.id}'),100)">
-            ${typeBadge(c.element_type)}
-            <span style="font-size:13px;flex:1">${c.name}</span>
-            <span style="font-size:11px;color:var(--text-muted)">${c.domain_name || ''}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div style="margin-top:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px">
-      <div class="section-title">方法论说明</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;color:var(--text-sec);line-height:1.8">
-        <div>
-          <div><strong style="color:var(--text-pri)">两系统</strong>：主动系统 / 对象系统</div>
-          <div><strong style="color:var(--text-pri)">五要素</strong>：主体、行为、客体、时间、空间</div>
-          <div><strong style="color:var(--text-pri)">问题驱动</strong>：对象系统诉求与现状的差异</div>
-          <div><strong style="color:var(--text-pri)">目标约束</strong>：主动系统为解决问题而设定目标</div>
-        </div>
-        <div>
-          <div><strong style="color:var(--text-pri)">三层问题</strong>：表象 → 根源 → 症结</div>
-          <div><strong style="color:var(--text-pri)">属性</strong>：基础属性（不变）+ 领域属性（领域特定）</div>
-          <div><strong style="color:var(--text-pri)">关系</strong>：17种标准关系类型</div>
-          <div><strong style="color:var(--text-pri)">指标</strong>：用数量值刻画问题与目标</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ─── 全局搜索 ─────────────────────────────────────────────
-let searchTimer = null;
-async function doSearch(q) {
-  clearTimeout(searchTimer);
-  const dd = document.getElementById('search-dropdown');
-  if (!q.trim()) { dd.style.display = 'none'; return; }
-  searchTimer = setTimeout(async () => {
-    const { data } = await api(`/search?q=${encodeURIComponent(q)}`);
-    if (!data.length) { dd.style.display = 'none'; return; }
-    dd.innerHTML = data.map(item => `
-      <div class="search-result-item" onclick="handleSearchClick('${item.id}','${item.type}')">
-        ${typeBadge(item.subtype || item.type)}
-        <span>${item.name}</span>
-        ${item.description ? `<span style="font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.description.slice(0,40)}</span>` : ''}
-      </div>
-    `).join('');
-    dd.style.display = 'block';
-  }, 300);
-}
-
-function handleSearchClick(id, type) {
-  document.getElementById('search-dropdown').style.display = 'none';
-  document.getElementById('global-search').value = '';
-  if (type === 'concept') {
-    switchView('ontology');
-    setTimeout(() => selectConcept(id), 100);
+function gotoMStep(step){
+  for(let i=0;i<5;i++){
+    el(`mpane-${i}`).classList.toggle('active',i===step);
+    const dot=el(`ms-dot-${i}`), lbl=el(`ms-label-${i}`);
+    dot.classList.remove('active','done');
+    lbl.classList.remove('active','done');
+    if(i===step){ dot.classList.add('active'); lbl.classList.add('active'); }
+    else if(i<step){ dot.classList.add('done'); lbl.classList.add('done'); }
   }
+  state.modeling.currentStep=step;
+  if(step===4) renderSavePreview();
 }
 
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-box')) {
-    document.getElementById('search-dropdown').style.display = 'none';
+function handleFileDrop(event){
+  event.preventDefault(); el('drop-zone').classList.remove('dragover');
+  const file=event.dataTransfer.files[0]; if(file) handleFileSelect(file);
+}
+async function handleFileSelect(file){
+  if(!file) return;
+  const badge=el('file-name-badge');
+  badge.style.display=''; badge.textContent=`📄 ${file.name}（${(file.size/1024).toFixed(1)} KB）`;
+  el('upload-status').textContent=`已选择文件：${file.name}`;
+}
+async function doUpload(){
+  const pasteText=el('paste-text').value.trim(), fileInput=el('file-input'), file=fileInput.files[0];
+  if(!pasteText&&!file){toast('请上传文件或粘贴文本','error'); return;}
+  el('upload-status').textContent='上传中…';
+  try{
+    let resp;
+    if(pasteText) resp=await api('POST','/api/modeling/upload',{filename:'pasted.txt',text:pasteText});
+    else{ const b64=await fileToBase64(file); resp=await api('POST','/api/modeling/upload',{filename:file.name,base64:b64}); }
+    if(resp.error){toast(resp.error,'error'); el('upload-status').textContent=''; return;}
+    state.modeling.fileId=resp.fileId; state.modeling.markdown=resp.markdown;
+    el('preview-md').value=resp.markdown; el('preview-chars').textContent=resp.charCount;
+    el('upload-status').textContent=`✅ 上传成功（${resp.charCount} 字符）`;
+    gotoMStep(1);
+  }catch(e){toast('上传失败: '+e.message,'error'); el('upload-status').textContent='';}
+}
+function fileToBase64(file){return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });}
+
+async function doExtract(){
+  const md=el('preview-md').value;
+  if(!md.trim()){toast('文档内容不能为空','error'); return;}
+  state.modeling.markdown=md;
+  toast('正在抽取五要素候选概念…','info',5000);
+  try{
+    const resp=await api('POST','/api/modeling/extract',{fileId:state.modeling.fileId,markdown:md,domain:state.currentDomainId||''});
+    if(resp.error){toast(resp.error,'error'); return;}
+    state.modeling.candidates=resp.concepts||[];
+    el('cand-total').textContent=state.modeling.candidates.length;
+    renderCandidates(''); updateCandCount(); gotoMStep(2);
+  }catch(e){toast('抽取失败: '+e.message,'error');}
+}
+
+let candTypeFilter='';
+function filterCands(btn,type){
+  candTypeFilter=type;
+  document.querySelectorAll('#mpane-2 .filter-tabs .filter-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderCandidates(type);
+}
+function renderCandidates(tf){
+  const list=el('cand-list');
+  const cands=tf?state.modeling.candidates.filter(c=>c.element_type===tf):state.modeling.candidates;
+  list.innerHTML=cands.map(c=>{
+    const idx=state.modeling.candidates.indexOf(c);
+    return `<div class="cand-row${c.confirmed?' editing':''}" onclick="selectCand(${idx})" id="cr-${idx}">
+      <input type="checkbox" ${c.confirmed?'checked':''} onclick="event.stopPropagation();toggleCand(${idx})" style="cursor:pointer">
+      ${typeBadge(c.element_type)}<span style="font-size:12px;flex:1">${c.name}</span>
+      <span class="cand-conf">${Math.round(c.confidence*100)}%</span>
+    </div>`;
+  }).join('')||'<div style="padding:16px;color:var(--text-muted);font-size:12px">暂无此类型候选</div>';
+}
+function toggleCand(idx){state.modeling.candidates[idx].confirmed=!state.modeling.candidates[idx].confirmed; renderCandidates(candTypeFilter); updateCandCount();}
+function selectAllCands(val){
+  (candTypeFilter?state.modeling.candidates.filter(c=>c.element_type===candTypeFilter):state.modeling.candidates).forEach(c=>c.confirmed=val);
+  renderCandidates(candTypeFilter); updateCandCount();
+}
+function updateCandCount(){el('cand-confirmed').textContent=state.modeling.candidates.filter(c=>c.confirmed).length;}
+
+let editCandIdx=-1;
+function selectCand(idx){
+  editCandIdx=idx; const c=state.modeling.candidates[idx];
+  el('cand-edit-panel').innerHTML=`
+    <div class="form-group" style="margin-bottom:10px"><div class="form-label" style="font-size:11px">名称</div><input class="form-control" id="ce-name" value="${c.name}" style="font-size:12px"></div>
+    <div class="form-group" style="margin-bottom:10px"><div class="form-label" style="font-size:11px">要素类型</div>
+    <select class="form-control" id="ce-type" style="font-size:12px">${['subject','behavior','object','time','space','problem','goal','indicator'].map(t=>`<option value="${t}"${c.element_type===t?' selected':''}>${TYPE_LABELS[t]}</option>`).join('')}</select></div>
+    <div class="form-group" style="margin-bottom:10px"><div class="form-label" style="font-size:11px">所属系统</div>
+    <select class="form-control" id="ce-sys" style="font-size:12px">${['universal','active_system','object_system'].map(s=>`<option value="${s}"${c.system_role===s?' selected':''}>${SYS_LABELS[s]}</option>`).join('')}</select></div>
+    <div class="form-group" style="margin-bottom:10px"><div class="form-label" style="font-size:11px">定义</div><textarea class="form-control" id="ce-def" rows="3" style="font-size:12px">${c.definition||''}</textarea></div>
+    <div style="font-size:10px;color:var(--text-muted);padding:6px;background:var(--bg-hover);border-radius:4px;margin-bottom:10px">来源：${c.source_text||'—'}</div>
+    <button class="btn btn-success btn-sm" onclick="applyCandEdit(${idx})" style="width:100%">应用修改</button>`;
+}
+function applyCandEdit(idx){
+  const c=state.modeling.candidates[idx];
+  c.name=el('ce-name').value.trim()||c.name; c.element_type=el('ce-type').value;
+  c.system_role=el('ce-sys').value; c.definition=el('ce-def').value.trim();
+  renderCandidates(candTypeFilter); toast('已应用修改','success');
+}
+
+async function autoDiscoverRelations(){
+  const confirmed=state.modeling.candidates.filter(c=>c.confirmed);
+  if(confirmed.length<2){toast('至少需要2个已确认概念','error'); return;}
+  const rels=[];
+  const RULES=[
+    {s:'subject',r:'实施',t:'behavior'},{s:'behavior',r:'利用',t:'object'},
+    {s:'behavior',r:'依据',t:'object'},{s:'behavior',r:'输出',t:'object'},
+    {s:'subject',r:'在',t:'time'},{s:'subject',r:'在',t:'space'},
+    {s:'subject',r:'提出',t:'problem'},{s:'subject',r:'制定',t:'goal'},
+    {s:'goal',r:'解决',t:'problem'},
+  ];
+  for(const rule of RULES){
+    const srcs=confirmed.filter(c=>c.element_type===rule.s), tgts=confirmed.filter(c=>c.element_type===rule.t);
+    for(const s of srcs.slice(0,2)) for(const t of tgts.slice(0,2))
+      if(rels.length<30) rels.push({id:'r_'+Math.random().toString(36).slice(2),source_id:s.id,target_id:t.id,relation_type:rule.r});
+  }
+  state.modeling.relations=rels; renderModelingRels(); toast(`自动发现 ${rels.length} 条候选关系`,'success');
+}
+function renderModelingRels(){
+  const list=el('rel-list'), empty=el('rel-empty');
+  el('rel-total').textContent=state.modeling.relations.length;
+  if(!state.modeling.relations.length){
+    list.innerHTML=''; if(empty) empty.style.display='';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  list.innerHTML=state.modeling.relations.map((r,i)=>{
+    const s=state.modeling.candidates.find(c=>c.id===r.source_id), t=state.modeling.candidates.find(c=>c.id===r.target_id);
+    return `<div class="cand-rel-row"><span style="color:var(--text-sec)">${s?s.name:'?'}</span><span style="background:var(--bg-hover);padding:2px 6px;border-radius:4px;color:var(--accent)">${r.relation_type}</span><span style="color:var(--text-sec)">${t?t.name:'?'}</span><button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:2px 6px" onclick="removeModelRel(${i})">✕</button></div>`;
+  }).join('');
+}
+function removeModelRel(idx){state.modeling.relations.splice(idx,1); renderModelingRels();}
+function openAddRelModal(){
+  const conf=state.modeling.candidates.filter(c=>c.confirmed);
+  if(conf.length<2){toast('至少需要2个已确认概念','error'); return;}
+  const opts=conf.map(c=>`<option value="${c.id}">${c.name} (${TYPE_LABELS[c.element_type]})</option>`).join('');
+  el('addrel-source').innerHTML=opts; el('addrel-target').innerHTML=opts; el('modal-add-rel').classList.add('open');
+}
+function saveAddRel(){
+  const sid=el('addrel-source').value, tid=el('addrel-target').value;
+  if(!sid||!tid){toast('请选择发起方和目标方','error'); return;}
+  state.modeling.relations.push({id:'r_'+Math.random().toString(36).slice(2),source_id:sid,target_id:tid,relation_type:el('addrel-type').value});
+  renderModelingRels(); closeModal('modal-add-rel');
+}
+
+function renderSavePreview(){
+  el('save-concepts-cnt').textContent=state.modeling.candidates.filter(c=>c.confirmed).length;
+  el('save-relations-cnt').textContent=state.modeling.relations.length;
+}
+function onSaveDomainChange(){el('new-domain-row').style.display=el('save-domain-sel').value==='__new__'?'':'none';}
+async function doSaveModeling(){
+  const confirmed=state.modeling.candidates.filter(c=>c.confirmed);
+  if(!confirmed.length){toast('没有已确认的概念','error'); return;}
+  const dv=el('save-domain-sel').value;
+  const body={domainId:(dv&&dv!=='__new__')?dv:null,domainName:dv==='__new__'?el('new-domain-name').value.trim():null,concepts:confirmed,relations:state.modeling.relations};
+  try{
+    const resp=await api('POST','/api/modeling/save',body);
+    if(resp.error){toast(resp.error,'error'); return;}
+    const s=resp.saved;
+    toast(`保存成功：${s.concepts} 个概念，${s.relations} 条关系`,'success',4000);
+    resetModeling(); loadDomains(); loadConcepts();
+  }catch(e){toast('保存失败: '+e.message,'error');}
+}
+
+// ══════════════════════════════════════════════
+//  键盘 / 初始化
+// ══════════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+    closeGraphDetail();
   }
 });
 
-// ─── 导出/导入 ───────────────────────────────────────────
-async function exportData() {
-  const params = state.selectedDomainId ? `?domain_id=${state.selectedDomainId}` : '';
-  const data = await api(`/export${params}`);
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `ontology-${Date.now()}.json`;
-  a.click();
-  toast('导出成功');
-}
-
-async function importData(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try {
-    const data = JSON.parse(text);
-    const { imported } = await api('/import', { method: 'POST', body: data });
-    toast(`导入完成：概念 ${imported.concepts}，关系 ${imported.relations}，领域 ${imported.domains}`);
-    loadDomains();
-    loadConcepts();
-  } catch(err) {
-    toast('导入失败: ' + err.message, 'error');
-  }
-  e.target.value = '';
-}
-
-// ─── 窗口resize重绘图谱 ───────────────────────────────────
-window.addEventListener('resize', () => {
-  if (state.currentView === 'graph') {
-    clearTimeout(window._graphResizeTimer);
-    window._graphResizeTimer = setTimeout(loadGraph, 200);
-  }
-});
-
-// ─── 初始化 ───────────────────────────────────────────────
-(async function init() {
+(async function init(){
   await loadDomains();
-  await loadConcepts();
+  switchView('concepts');
 })();
 </script>
 </body>
 </html>
+

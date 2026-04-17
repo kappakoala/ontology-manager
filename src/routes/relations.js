@@ -75,6 +75,23 @@ router.post('/', (req, res) => {
   });
 });
 
+// 获取单条关系
+router.get('/:id', (req, res) => {
+  const row = db.prepare(`
+    SELECT r.*,
+      cs.name as source_name, cs.element_type as source_type,
+      ct.name as target_name, ct.element_type as target_type,
+      d.name as domain_name
+    FROM relations r
+    JOIN concepts cs ON r.source_id=cs.id
+    JOIN concepts ct ON r.target_id=ct.id
+    LEFT JOIN domains d ON r.domain_id=d.id
+    WHERE r.id=?
+  `).get(req.params.id);
+  if (!row) return res.status(404).json({ error: '关系不存在' });
+  res.json({ data: row });
+});
+
 // 更新关系
 router.put('/:id', (req, res) => {
   const { relation_type, rel_kind, label, note } = req.body;
