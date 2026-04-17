@@ -1318,7 +1318,11 @@ async function doUpload(){
   } catch(e){ toast('上传失败: '+e.message, 'error'); el('upload-status').textContent=''; }
 }
 async function uploadAndShowPreview(filename, markdown){
-  // 显示到预览页
+  // 前端已解析完毕，直接把 markdown 发给后端建 session
+  const resp = await api('POST','/api/modeling/upload',{filename, text: markdown});
+  if (resp.error) { toast('后端存储失败: '+resp.error,'error'); return; }
+  state.modeling.fileId = resp.fileId;
+  state.modeling.markdown = markdown;
   showDocPreview(filename, markdown);
   gotoMStep(1);
 }
