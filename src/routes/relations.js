@@ -23,10 +23,47 @@ const RELATION_TYPES = [
   { type: '前置', desc: '行为与行为之间存在先后顺序，构成动作流程', source: '行为', target: '行为' },
 ];
 
+// ──────────────────────────────────────────
+// 固定路径路由（必须在 /:id 之前注册）
+// ──────────────────────────────────────────
+
 // 获取关系类型列表
 router.get('/types', (req, res) => {
   res.json({ data: RELATION_TYPES });
 });
+
+// 获取图谱数据（用于可视化）
+router.get('/graph', (req, res) => {
+  const { domain_id, limit = 200 } = req.query;
+
+  let conceptSql = 'SELECT id, name, element_type, system_role, is_universal FROM concepts WHERE 1=1';
+  const cParams = [];
+  if (domain_id) { conceptSql += ' AND domain_id=?'; cParams.push(domain_id); }
+  conceptSql += ` LIMIT ${parseInt(limit)}`;
+  const concepts = db.prepare(conceptSql).all(...cParams);
+
+  const conceptIds = concepts.map(c => c.id);
+  if (conceptIds.length === 0) return res.json({ nodes: [], edges: [] });
+
+  const placeholders = conceptIds.map(() => '?').join(',');
+  const relations = db.prepare(`
+    SELECT r.id, r.source_id, r.target_id, r.relation_type, r.rel_kind,
+           cs.name as source_name, ct.name as target_name
+    FROM relations r
+    JOIN concepts cs ON r.source_id=cs.id
+    JOIN concepts ct ON r.target_id=ct.id
+    WHERE r.source_id IN (${placeholders}) AND r.target_id IN (${placeholders})
+  `).all(...conceptIds, ...conceptIds);
+
+  // 映射为 D3/G6 所需的 source/target 格式
+  const edges = relations.map(r => ({ ...r, source: r.source_id, target: r.target_id }));
+
+  res.json({ nodes: concepts, edges });
+});
+
+// ──────────────────────────────────────────
+// 参数路由 /:id
+// ──────────────────────────────────────────
 
 // 获取关系列表
 router.get('/', (req, res) => {
@@ -104,35 +141,6 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM relations WHERE id=?').run(req.params.id);
   res.json({ success: true });
-});
-
-// 获取图谱数据（用于可视化）
-router.get('/graph', (req, res) => {
-  const { domain_id, limit = 200 } = req.query;
-
-  let conceptSql = 'SELECT id, name, element_type, system_role, is_universal FROM concepts WHERE 1=1';
-  const cParams = [];
-  if (domain_id) { conceptSql += ' AND domain_id=?'; cParams.push(domain_id); }
-  conceptSql += ` LIMIT ${parseInt(limit)}`;
-  const concepts = db.prepare(conceptSql).all(...cParams);
-
-  const conceptIds = concepts.map(c => c.id);
-  if (conceptIds.length === 0) return res.json({ nodes: [], edges: [] });
-
-  const placeholders = conceptIds.map(() => '?').join(',');
-  const relations = db.prepare(`
-    SELECT r.id, r.source_id, r.target_id, r.relation_type, r.rel_kind,
-           cs.name as source_name, ct.name as target_name
-    FROM relations r
-    JOIN concepts cs ON r.source_id=cs.id
-    JOIN concepts ct ON r.target_id=ct.id
-    WHERE r.source_id IN (${placeholders}) AND r.target_id IN (${placeholders})
-  `).all(...conceptIds, ...conceptIds);
-
-  // 映射为 D3 forceLink 所需的 source/target 格式
-  const edges = relations.map(r => ({ ...r, source: r.source_id, target: r.target_id }));
-
-  res.json({ nodes: concepts, edges });
 });
 
 module.exports = router;

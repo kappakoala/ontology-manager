@@ -1,0 +1,60 @@
+constraints:
+  Problem:
+    level:
+    - phenomenon
+    - root
+    - crux
+  Subject:
+    system_role:
+    - active
+    - objective
+  System:
+    system_type:
+    - active
+    - objective
+relations:
+  belongs_to:
+    from:
+    - Subject
+    - Object
+    to:
+    - System
+  opposes:
+    from:
+    - System
+    to:
+    - System
+  solves:
+    from:
+    - Goal
+    to:
+    - Problem
+  utilizes:
+    from:
+    - Subject
+    to:
+    - Object
+types:
+  Domain:
+    required:
+    - name
+  Goal:
+    required:
+    - description
+    - indicator
+  Object:
+    required:
+    - name
+    - resource_value
+  Problem:
+    required:
+    - description
+    - level
+  Subject:
+    required:
+    - name
+    - system_role
+  System:
+    required:
+    - name
+    - system_type

@@ -128,6 +128,34 @@ db.exec(`
     FOREIGN KEY (card_id) REFERENCES ontology_cards(id) ON DELETE CASCADE,
     FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE CASCADE
   );
+
+  -- 异步任务（大文档处理、要素提取等）
+  CREATE TABLE IF NOT EXISTS tasks (
+    id         TEXT PRIMARY KEY,
+    type       TEXT NOT NULL,       -- document-parse | element-extract | relation-build | batch-process
+    status     TEXT DEFAULT 'pending', -- pending | queued | processing | completed | failed | cancelled
+    progress   REAL DEFAULT 0,      -- 0-100
+    priority   TEXT DEFAULT 'medium', -- high | medium | low
+    input      TEXT,                -- JSON: 任务输入参数
+    output     TEXT,                -- JSON: 任务输出结果
+    error      TEXT,                -- 错误信息
+    file_id    TEXT,                -- 关联的上传文件ID
+    domain_id  TEXT,                -- 关联的领域ID
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    started_at TEXT,
+    completed_at TEXT,
+    FOREIGN KEY (domain_id) REFERENCES domains(id)
+  );
+
+  -- 任务日志
+  CREATE TABLE IF NOT EXISTS task_logs (
+    id         TEXT PRIMARY KEY,
+    task_id    TEXT NOT NULL,
+    level      TEXT DEFAULT 'info', -- info | warn | error
+    message    TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+  );
 `);
 
 // ─────────────────────────────────────────────

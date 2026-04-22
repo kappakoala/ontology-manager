@@ -170,28 +170,40 @@ textarea.form-control{min-height:80px;resize:vertical;font-family:inherit} selec
 .input-row{display:flex;gap:8px;align-items:flex-start}
 .rel-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--bg-hover);border-radius:12px;font-size:11px}
 .rel-chip-src{color:var(--accent)}.rel-chip-tgt{color:var(--accent3)}
-/* ── 文档预览页 */
-.doc-preview-wrap{display:flex;flex-direction:column;gap:0;flex:1;min-height:0}
-.doc-preview-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-panel);border:1px solid var(--border);border-bottom:none;border-radius:10px 10px 0 0}
-.doc-preview-icon{font-size:28px;flex-shrink:0}
-.doc-preview-meta{flex:1;min-width:0}
-.doc-preview-filename{font-size:14px;font-weight:600;color:var(--text-pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.doc-preview-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
-.doc-preview-status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500}
-.doc-preview-status.ready{background:rgba(46,169,139,.15);color:var(--accent3)}
-.doc-preview-status.pending{background:rgba(224,155,74,.15);color:#e0994a}
-.doc-preview-status.error{background:rgba(224,82,82,.15);color:var(--danger)}
-.doc-preview-stats{display:flex;gap:16px;padding:8px 16px;background:var(--bg-card);border:1px solid var(--border);border-top:none;font-size:12px;color:var(--text-sec)}
-.doc-preview-stat{display:flex;align-items:center;gap:4px}
-.doc-preview-stat b{color:var(--accent);font-weight:600}
-.doc-preview-body{flex:1;min-height:0;border:1px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden;display:flex;flex-direction:column}
-.doc-preview-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
-.doc-preview-toolbar span{font-size:11px;color:var(--text-muted)}
-.doc-preview-toolbar .spacer{flex:1}
-.doc-preview-toggle{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-sec);font-size:11px;cursor:pointer;transition:all .15s}
-.doc-preview-toggle:hover,.doc-preview-toggle.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-#doc-preview-content{flex:1;overflow-y:auto;padding:16px;font-size:13px;line-height:1.8;color:var(--text-pri);background:var(--bg-base)}
-#doc-preview-content::-webkit-scrollbar{width:5px}#doc-preview-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* ── 文档预览页：左右对照布局 */
+.doc-compare-container{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.doc-compare-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.doc-compare-icon{font-size:28px}
+.doc-compare-stat{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-sec)}
+.doc-compare-stat b{color:var(--accent);font-weight:600}
+.doc-compare-status{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:500}
+.doc-compare-status.ready{background:rgba(46,169,139,.15);color:var(--accent3)}
+.doc-compare-status.pending{background:rgba(224,155,74,.15);color:#e0994a}
+.doc-compare-status.error{background:rgba(224,82,82,.15);color:var(--danger)}
+.doc-compare-status.processing{background:rgba(79,142,247,.15);color:var(--accent);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+.doc-compare-body{display:flex;flex:1;min-height:0;gap:0;overflow:hidden}
+.doc-compare-pane{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.doc-compare-pane:first-child{border-right:1px solid var(--border)}
+.doc-compare-pane-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;font-size:12px;color:var(--text-sec)}
+.doc-compare-pane-badge{padding:2px 8px;background:var(--bg-card);border-radius:4px;font-size:10px;color:var(--text-muted)}
+.doc-compare-pane-content{flex:1;overflow-y:auto;padding:16px;background:var(--bg-base);font-size:13px;line-height:1.8}
+.doc-compare-pane-content::-webkit-scrollbar{width:5px}.doc-compare-pane-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.doc-compare-empty{padding:40px 16px;text-align:center;color:var(--text-muted);font-size:13px}
+.doc-compare-empty-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.doc-compare-arrow{width:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-panel);border-left:1px solid var(--border);border-right:1px solid var(--border)}
+.doc-compare-arrow-inner{text-align:center}
+
+/* 原始文档内容样式 */
+#original-content .doc-file-info{padding:12px;background:var(--bg-card);border-radius:8px;margin-bottom:12px}
+#original-content .doc-file-name{font-size:14px;font-weight:600;color:var(--text-pri);margin-bottom:6px;word-break:break-all}
+#original-content .doc-file-meta{font-size:11px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap}
+#original-content .doc-file-badge{padding:2px 8px;background:var(--bg-hover);border-radius:4px;margin-right:4px}
+#original-content .doc-raw-preview{font-size:12px;color:var(--text-sec);margin-top:12px;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}
+#original-content .doc-raw-preview::-webkit-scrollbar{width:4px}.doc-raw-preview::-webkit-scrollbar-thumb{background:var(--border)}
+
+/* 解析结果内容样式 */
 #doc-preview-content h1{font-size:18px;font-weight:700;color:var(--accent);margin:0 0 12px;border-bottom:1px solid var(--border);padding-bottom:8px}
 #doc-preview-content h2{font-size:15px;font-weight:600;color:var(--accent2);margin:14px 0 8px}
 #doc-preview-content h3{font-size:13px;font-weight:600;color:var(--text-sec);margin:10px 0 6px}
@@ -207,12 +219,13 @@ textarea.form-control{min-height:80px;resize:vertical;font-family:inherit} selec
 #doc-preview-content tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 #doc-preview-content code{background:var(--bg-card);padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace}
 #doc-preview-content pre{background:var(--bg-card);padding:12px;border-radius:6px;overflow-x:auto;font-size:12px;font-family:monospace;margin:8px 0}
-.doc-edit-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(79,142,247,.05);border-top:1px solid rgba(79,142,247,.2);flex-shrink:0}
-.doc-edit-row span{font-size:11px;color:var(--accent);font-weight:500}
-.doc-edit-row textarea{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text-pri);font-family:monospace;resize:none;min-height:60px;outline:none;transition:border-color .15s}
-.doc-edit-row textarea:focus{border-color:var(--accent)}
-.doc-parse-error{padding:16px;text-align:center;color:var(--text-muted);font-size:13px}
-.doc-parse-error .err-icon{font-size:36px;margin-bottom:8px}
+.doc-preview-toggle{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-sec);font-size:11px;cursor:pointer;transition:all .15s}
+.doc-preview-toggle:hover,.doc-preview-toggle.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.doc-compare-footer{flex-shrink:0;padding:12px 16px;background:var(--bg-panel);border-top:1px solid var(--border)}
+.doc-compare-editor{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text-pri);font-family:monospace;resize:none;min-height:80px;max-height:150px;outline:none;transition:border-color .15s;line-height:1.6}
+.doc-compare-editor:focus{border-color:var(--accent)}
+.doc-compare-editor::placeholder{color:var(--text-muted)}
 </style>
 </head>
 <body>
@@ -387,45 +400,77 @@ textarea.form-control{min-height:80px;resize:vertical;font-family:inherit} selec
         </div>
       </div>
 
-      <!-- 步骤 2：文档预览 -->
+      <!-- 步骤 2：文档预览（左右对照布局） -->
       <div class="mstep-pane" id="mpane-1">
-        <div class="mscroll" style="gap:12px">
-          <!-- 文档信息头 -->
-          <div class="doc-preview-header" id="doc-header">
-            <div class="doc-preview-icon" id="doc-icon">📄</div>
-            <div class="doc-preview-meta">
-              <div class="doc-preview-filename" id="doc-filename">—</div>
-              <div class="doc-preview-sub" id="doc-subtitle">请上传或粘贴文档内容</div>
-            </div>
-            <div class="doc-preview-status pending" id="doc-status">
-              <span>⏳</span><span id="doc-status-text">等待上传</span>
-            </div>
-          </div>
-          <!-- 统计栏 -->
-          <div class="doc-preview-stats">
-            <div class="doc-preview-stat">字符 <b id="stat-chars">0</b></div>
-            <div class="doc-preview-stat">词 <b id="stat-words">0</b></div>
-            <div class="doc-preview-stat">段落 <b id="stat-paras">0</b></div>
-            <div class="doc-preview-stat">行 <b id="stat-lines">0</b></div>
-          </div>
-          <!-- 预览体 -->
-          <div class="doc-preview-body">
-            <div class="doc-preview-toolbar">
-              <span>📖 文档预览</span>
-              <div class="spacer"></div>
-              <button class="doc-preview-toggle active" id="toggle-preview" onclick="togglePreviewMode('preview')">预览</button>
-              <button class="doc-preview-toggle" id="toggle-source" onclick="togglePreviewMode('source')">源码</button>
-            </div>
-            <div id="doc-preview-content">
-              <div class="doc-parse-error">
-                <div class="err-icon">📂</div>
-                <div>上传文档或粘贴文本后，这里将显示文档内容</div>
+        <div class="doc-compare-container">
+          <!-- 顶部信息栏 -->
+          <div class="doc-compare-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="doc-compare-icon" id="doc-icon">📄</span>
+              <div>
+                <div style="font-size:14px;font-weight:600" id="doc-filename">—</div>
+                <div style="font-size:12px;color:var(--text-muted)" id="doc-subtitle">等待上传</div>
               </div>
             </div>
-            <div class="doc-edit-row" id="doc-edit-row" style="display:none">
-              <span>✏️ 修正文本</span>
-              <textarea id="preview-md" placeholder="在这里修正文档内容后再抽取五要素…"></textarea>
+            <div style="display:flex;align-items:center;gap:16px">
+              <div class="doc-compare-stat">字符 <b id="stat-chars">0</b></div>
+              <div class="doc-compare-stat">词 <b id="stat-words">0</b></div>
+              <div class="doc-compare-stat">段落 <b id="stat-paras">0</b></div>
+              <div class="doc-compare-status ready" id="doc-status">
+                <span>⏳</span><span id="doc-status-text">等待解析</span>
+              </div>
             </div>
+          </div>
+          
+          <!-- 左右对照主体 -->
+          <div class="doc-compare-body">
+            <!-- 左侧：原始文档 -->
+            <div class="doc-compare-pane" id="pane-original">
+              <div class="doc-compare-pane-header">
+                <span>📄 原文档</span>
+                <span class="doc-compare-pane-badge" id="original-type-badge">—</span>
+              </div>
+              <div class="doc-compare-pane-content" id="original-content">
+                <div class="doc-compare-empty">
+                  <div class="doc-compare-empty-icon">📂</div>
+                  <div>上传文件后将显示原文档信息</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 中间：箭头指示 -->
+            <div class="doc-compare-arrow">
+              <div class="doc-compare-arrow-inner">
+                <span style="font-size:20px">→</span>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">markitdown</div>
+              </div>
+            </div>
+            
+            <!-- 右侧：解析结果 -->
+            <div class="doc-compare-pane" id="pane-parsed">
+              <div class="doc-compare-pane-header">
+                <span>📝 解析结果</span>
+                <div style="display:flex;gap:6px">
+                  <button class="doc-preview-toggle active" id="toggle-preview" onclick="togglePreviewMode('preview')">预览</button>
+                  <button class="doc-preview-toggle" id="toggle-source" onclick="togglePreviewMode('source')">源码</button>
+                </div>
+              </div>
+              <div class="doc-compare-pane-content" id="doc-preview-content">
+                <div class="doc-compare-empty">
+                  <div class="doc-compare-empty-icon">🔄</div>
+                  <div>等待解析完成</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 底部：可编辑的解析文本 -->
+          <div class="doc-compare-footer">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span>✏️ 修正解析结果</span>
+              <span style="font-size:11px;color:var(--text-muted)">（如需修正内容后再抽取五要素，可在此编辑）</span>
+            </div>
+            <textarea id="preview-md" class="doc-compare-editor" placeholder="解析后的文本将显示在这里，可直接修正后再抽取五要素…"></textarea>
           </div>
         </div>
         <div class="ms-action">
@@ -1213,18 +1258,21 @@ async function loadDashboard(){
 //  本体建模：五步骤
 // ══════════════════════════════════════════════
 function resetModeling(){
-  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0,selectedFile:null};
+  state.modeling={fileId:null,markdown:'',candidates:[],relations:[],currentStep:0,selectedFile:null,currentFile:null};
   el('file-input').value=''; el('paste-text').value=''; el('upload-status').textContent='';
   el('file-name-badge').style.display='none';
   el('doc-filename').textContent='—';
-  el('doc-subtitle').textContent='请上传或粘贴文档内容';
+  el('doc-subtitle').textContent='等待上传';
   el('doc-icon').textContent='📄';
-  el('doc-status').className='doc-preview-status pending';
-  el('doc-status').innerHTML='<span>⏳</span><span id="doc-status-text">等待上传</span>';
+  el('doc-status').className='doc-compare-status pending';
+  el('doc-status').innerHTML='<span>⏳</span><span id="doc-status-text">等待解析</span>';
   el('stat-chars').textContent='0'; el('stat-words').textContent='0';
-  el('stat-paras').textContent='0'; el('stat-lines').textContent='0';
-  el('doc-preview-content').innerHTML=`<div class="doc-parse-error"><div class="err-icon">📂</div><div>上传文档或粘贴文本后，这里将显示文档内容</div></div>`;
-  el('doc-edit-row').style.display='none';
+  el('stat-paras').textContent='0';
+  // 重置左侧原文档内容
+  el('original-type-badge').textContent='—';
+  el('original-content').innerHTML=`<div class="doc-compare-empty"><div class="doc-compare-empty-icon">📂</div><div>上传文件后将显示原文档信息</div></div>`;
+  // 重置右侧解析结果
+  el('doc-preview-content').innerHTML=`<div class="doc-compare-empty"><div class="doc-compare-empty-icon">🔄</div><div>等待解析完成</div></div>`;
   el('preview-md').value='';
   currentPreviewMode='preview';
   document.getElementById('toggle-preview').classList.add('active');
@@ -1267,7 +1315,7 @@ async function doUpload(){
       // 文本直接上传
       const resp = await api('POST','/api/modeling/upload',{filename:'粘贴文本', text: pasteText});
       if (resp.error) { toast(resp.error, 'error'); el('upload-status').textContent=''; return; }
-      showDocPreview(resp.filename, resp.markdown, resp.charCount);
+      showDocPreview(resp.filename, resp.markdown, resp.charCount, null);
       state.modeling.fileId = resp.fileId;
       gotoMStep(1);
     } else {
@@ -1276,22 +1324,26 @@ async function doUpload(){
       const b64 = await fileToBase64(file);
       const resp = await api('POST','/api/modeling/upload',{filename:file.name, base64:b64});
       if (resp.error) { toast(resp.error, 'error'); el('upload-status').textContent=''; return; }
-      showDocPreview(resp.filename, resp.markdown, resp.charCount);
+      showDocPreview(resp.filename, resp.markdown, resp.charCount, file);
       state.modeling.fileId = resp.fileId;
       gotoMStep(1);
     }
   } catch(e){ toast('上传失败: '+e.message, 'error'); el('upload-status').textContent=''; }
 }
-function showDocPreview(filename, markdown, charCount){
+function showDocPreview(filename, markdown, charCount, originalFile){
   state.modeling.markdown = markdown;
+  state.modeling.currentFile = originalFile || { name: filename };
+  
   const ext = filename.split('.').pop().toLowerCase();
-  const icons = {'docx':'📝','pdf':'📄','txt':'📃','md':'📋','text':'📃'};
+  const icons = {'docx':'📝','pdf':'📄','txt':'📃','md':'📋','text':'📃', 'doc':'📄'};
+  const typeNames = {'docx':'Word文档(.docx)','pdf':'PDF文档','txt':'纯文本','md':'Markdown','text':'文本文件','doc':'Word文档(.doc)'};
+  
   el('doc-icon').textContent = icons[ext] || '📄';
   el('doc-filename').textContent = filename;
-  el('doc-subtitle').textContent = `上传于 ${new Date().toLocaleTimeString('zh-CN')}`;
+  el('doc-subtitle').textContent = `上传于 ${new Date().toLocaleTimeString('zh-CN')} · 格式: ${typeNames[ext] || ext}`;
 
   const status = el('doc-status');
-  status.className = 'doc-preview-status ready';
+  status.className = 'doc-compare-status ready';
   status.innerHTML = '<span>✓</span><span id="doc-status-text">解析成功</span>';
 
   // 统计
@@ -1302,19 +1354,52 @@ function showDocPreview(filename, markdown, charCount){
   el('stat-chars').textContent = chars.toLocaleString();
   el('stat-words').textContent = words.toLocaleString();
   el('stat-paras').textContent = paras.toLocaleString();
-  el('stat-lines').textContent = lines.toLocaleString();
 
-  // 渲染预览内容
+  // 左侧：原文档信息
+  const origContent = el('original-content');
+  const fileSize = originalFile ? (originalFile.size / 1024).toFixed(1) + ' KB' : '—';
+  const fileType = typeNames[ext] || ext.toUpperCase();
+  
+  // 判断是否为粘贴文本
+  if (filename === '粘贴文本') {
+    el('original-type-badge').textContent = '纯文本';
+    origContent.innerHTML = `
+      <div class="doc-file-info">
+        <div class="doc-file-name">📝 ${filename}</div>
+        <div class="doc-file-meta">
+          <span><span class="doc-file-badge">类型</span>粘贴文本</span>
+          <span><span class="doc-file-badge">字符</span>${chars.toLocaleString()}</span>
+        </div>
+      </div>
+      <div class="doc-raw-preview">${escapeHtml(markdown)}</div>
+    `;
+  } else {
+    el('original-type-badge').textContent = ext.toUpperCase();
+    origContent.innerHTML = `
+      <div class="doc-file-info">
+        <div class="doc-file-name">📄 ${filename}</div>
+        <div class="doc-file-meta">
+          <span><span class="doc-file-badge">格式</span>${fileType}</span>
+          <span><span class="doc-file-badge">大小</span>${fileSize}</span>
+          <span><span class="doc-file-badge">字符</span>${chars.toLocaleString()}</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
+        原文档已转换为 Markdown 格式并显示在右侧
+      </div>
+    `;
+  }
+
+  // 右侧：解析结果
   el('preview-md').value = markdown;
-  el('doc-edit-row').style.display = 'flex';
-  renderMarkdownPreview(markdown, 'preview');
+  renderMarkdownPreview(markdown, currentPreviewMode);
 
   el('upload-status').textContent = `✅ 已就绪（${chars.toLocaleString()} 字符）`;
 }
 function renderMarkdownPreview(md, mode){
   const container = el('doc-preview-content');
   if (mode === 'source') {
-    container.innerHTML = `<pre style="white-space:pre-wrap;word-break:break-all;margin:0">${escapeHtml(md)}</pre>`;
+    container.innerHTML = `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-family:monospace;font-size:12px">${escapeHtml(md)}</pre>`;
   } else {
     container.innerHTML = mdToHtml(md);
   }
@@ -1330,7 +1415,7 @@ function escapeHtml(str){
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function mdToHtml(md){
-  if (!md.trim()) return '<div class="doc-parse-error"><div class="err-icon">📂</div><div>文档内容为空</div></div>';
+  if (!md.trim()) return '<div class="doc-compare-empty"><div class="doc-compare-empty-icon">📂</div><div>文档内容为空</div></div>';
   let html = md
     // 代码块
     .replace(/```(\w*)\n([\s\S]*?)```/g, (_,lang,code)=>`<pre><code>${escapeHtml(code.trim())}</code></pre>`)

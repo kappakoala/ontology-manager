@@ -55,12 +55,12 @@ router.post('/upload', async (req, res) => {
     }
 
     sessions.set(fileId, { markdown, concepts: null });
-    return res.json({ fileId, filename, markdown, charCount: markdown.length });
+    return res.json({ success: true, fileId, filename, markdown, charCount: markdown.length });
   }
 
   // ── 方式 B：multipart（Busboy）──
   if (!Busboy) {
-    return res.status(400).json({ error: '请使用 JSON base64 上传方式（busboy 未安装）' });
+    return res.status(400).json({ success: false, error: '请使用 JSON base64 上传方式（busboy 未安装）' });
   }
 
   const fileId = uuidv4();
@@ -76,13 +76,13 @@ router.post('/upload', async (req, res) => {
   });
 
   bb.on('close', async () => {
-    if (!savedPath) return res.status(400).json({ error: '未收到文件' });
+    if (!savedPath) return res.status(400).json({ success: false, error: '未收到文件' });
     try {
       const markdown = await convertToMarkdown(savedPath, fileId);
       sessions.set(fileId, { markdown, concepts: null });
-      res.json({ fileId, filename: origName, markdown, charCount: markdown.length });
+      res.json({ success: true, fileId, filename: origName, markdown, charCount: markdown.length });
     } catch (e) {
-      res.status(500).json({ error: '文档转换失败: ' + e.message });
+      res.status(500).json({ success: false, error: '文档转换失败: ' + e.message });
     }
   });
 
@@ -107,7 +107,7 @@ router.get('/preview/:fileId', (req, res) => {
 router.post('/extract', async (req, res) => {
   const { fileId, markdown: mdOverride, domain = '' } = req.body;
   const session = sessions.get(fileId);
-  if (!session) return res.status(404).json({ error: 'Session 不存在，请先上传文档' });
+  if (!session) return res.status(404).json({ success: false, error: 'Session 不存在，请先上传文档' });
 
   const markdown = mdOverride || session.markdown;
 
@@ -115,9 +115,9 @@ router.post('/extract', async (req, res) => {
     const concepts = await runSkillExtract(markdown, domain);
     session.concepts = concepts;
     sessions.set(fileId, session);
-    res.json({ concepts });
+    res.json({ success: true, concepts });
   } catch (e) {
-    res.status(500).json({ error: '抽取失败: ' + e.message });
+    res.status(500).json({ success: false, error: '抽取失败: ' + e.message });
   }
 });
 
@@ -128,7 +128,7 @@ router.post('/extract', async (req, res) => {
  */
 router.post('/save', (req, res) => {
   const { domainId, domainName, concepts = [], relations = [] } = req.body;
-  if (!concepts.length) return res.status(400).json({ error: '没有需要保存的概念' });
+  if (!concepts.length) return res.status(400).json({ success: false, error: '没有需要保存的概念' });
 
   // 临时 ID -> 真实 DB ID 的映射
   const idMap = {};
@@ -211,23 +211,84 @@ router.get('/relation-types', (req, res) => {
 
 /**
  * 将文件转换为 Markdown
- * 优先使用 markitdown（Python CLI），不可用时退化为纯文本读取
+ * 使用 markitdown（Python CLI）作为主要转换引擎
+ * 支持格式：Office(doc/docx/ppt/pptx/xls/xlsx)、PDF、图片(jpg/png/gif等)、音频(mp3/wav等)、视频(mp4/avi等)
  */
 async function convertToMarkdown(filePath, fileId) {
+  const ext = path.extname(filePath).toLowerCase();
+
+  // 对于 .doc 文件，先用 macOS textutil 转换为 .docx
+  if (ext === '.doc') {
+    return new Promise((resolve, reject) => {
+      const convertedPath = filePath + 'x'; // .docx
+      execFile('textutil', ['-convert', 'docx', '-output', convertedPath, filePath], { timeout: 30000 }, (err) => {
+        if (err) {
+          return resolve(`[文档格式不支持]\n\n无法解析 .doc 文件（文件路径: ${filePath}）。\n\n建议：\n1. 用 Word/WPS 将文档另存为 .docx 格式\n2. 或直接粘贴文档文本内容\n\n---\n`);
+        }
+        // 转换成功后，用 markitdown 解析 .docx
+        execFile('markitdown', [convertedPath], { timeout: 30000 }, (mErr, mStdout, mStderr) => {
+          try { fs.unlinkSync(convertedPath); } catch (_) {} // 清理临时文件
+          if (!mErr && mStdout.trim()) {
+            return resolve(mStdout.trim());
+          }
+          resolve(`[文档转换失败]\n\n文件已上传但无法解析内容（路径: ${filePath}）。\n建议将文档另存为 .docx 格式后重试，或直接粘贴文本内容。\n\n---\n`);
+        });
+      });
+    });
+  }
+
+  // 图片文件：OCR 提取
+  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif', '.webp'];
+  if (imageExts.includes(ext)) {
+    return new Promise((resolve, reject) => {
+      execFile('markitdown', [filePath], { timeout: 60000 }, (err, stdout, stderr) => {
+        if (!err && stdout.trim()) {
+          return resolve(`# 图片内容（OCR识别）\n\n${stdout.trim()}`);
+        }
+        resolve(`[图片处理提示]\n\n图片已上传（${ext}格式），但OCR识别未返回文字内容。\n可能原因：\n1. 图片中无文字\n2. OCR服务未就绪\n\n---\n`);
+      });
+    });
+  }
+
+  // 音频文件：ASR 语音转写
+  const audioExts = ['.mp3', '.wav', '.m4a', '.flac', '.ogg', '.aac'];
+  if (audioExts.includes(ext)) {
+    return new Promise((resolve, reject) => {
+      execFile('markitdown', [filePath], { timeout: 120000 }, (err, stdout, stderr) => {
+        if (!err && stdout.trim()) {
+          return resolve(`# 音频内容（语音转写）\n\n${stdout.trim()}`);
+        }
+        resolve(`[音频处理提示]\n\n音频已上传（${ext}格式），但语音转写未返回文字内容。\n可能原因：\n1. 音频中无语音\n2. ASR服务未就绪\n\n---\n`);
+      });
+    });
+  }
+
+  // 视频文件：关键帧和字幕提取
+  const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.wmv'];
+  if (videoExts.includes(ext)) {
+    return new Promise((resolve, reject) => {
+      execFile('markitdown', [filePath], { timeout: 180000 }, (err, stdout, stderr) => {
+        if (!err && stdout.trim()) {
+          return resolve(`# 视频内容（关键帧+字幕提取）\n\n${stdout.trim()}`);
+        }
+        resolve(`[视频处理提示]\n\n视频已上传（${ext}格式），但内容提取未返回结果。\n可能原因：\n1. 视频中无文字/字幕\n2. 视频处理服务未就绪\n\n---\n`);
+      });
+    });
+  }
+
+  // 标准流程：markitdown 直接解析（docx/pptx/xlsx/pdf/txt/md 等）
   return new Promise((resolve, reject) => {
-    // 尝试 markitdown
-    execFile('markitdown', [filePath], { timeout: 30000 }, (err, stdout, stderr) => {
+    const timeout = ext === '.pdf' ? 60000 : 30000; // PDF 解析较慢
+    execFile('markitdown', [filePath], { timeout }, (err, stdout, stderr) => {
       if (!err && stdout.trim()) {
         return resolve(stdout.trim());
       }
       // 退化：尝试直接读取为文本
       try {
-        const ext = path.extname(filePath).toLowerCase();
-        if (['.txt', '.md', '.text'].includes(ext)) {
+        if (['.txt', '.md', '.text', '.csv'].includes(ext)) {
           return resolve(fs.readFileSync(filePath, 'utf-8'));
         }
-        // 对于 docx/pdf，返回提示信息让用户粘贴文本
-        resolve(`[文档已上传，路径: ${filePath}]\n\n请在下方文本框中粘贴文档内容，或安装 markitdown 自动转换：\npip install markitdown\n\n---\n`);
+        resolve(`[文档格式不支持]\n\n无法解析该文件格式（${ext}）。\n支持格式：.docx, .pptx, .xlsx, .pdf, .txt, .md, .jpg, .png, .mp3, .mp4 等\n\n---\n`);
       } catch (readErr) {
         reject(readErr);
       }
@@ -236,20 +297,81 @@ async function convertToMarkdown(filePath, fileId) {
 }
 
 /**
- * 调用 Hermes knowledge-ontology-modeling skill 进行五要素抽取
- * Skill 路径：~/.hermes/skills/knowledge/knowledge-ontology-modeling/
- * 若 Skill 不可用，使用规则基线提取
+ * 调用 five-elements-ontology 技能进行五要素抽取
+ * 优先级：five-elements-ontology CLI > Hermes Skill > 规则基线提取
  */
 async function runSkillExtract(markdown, domain) {
+  // 优先尝试 five-elements-ontology 技能的 extract 命令
+  const fiveElementsResult = await callFiveElementsSkill(markdown, domain);
+  if (fiveElementsResult) return fiveElementsResult;
+
+  // 次选：尝试 Hermes skill
   const skillDir = path.join(process.env.HOME, '.hermes/skills/knowledge/knowledge-ontology-modeling');
   const skillExists = fs.existsSync(skillDir);
-
   if (skillExists) {
-    return await callHermesSkill(skillDir, markdown, domain);
+    const hermesResult = await callHermesSkill(skillDir, markdown, domain);
+    if (hermesResult && hermesResult.length > 0) return hermesResult;
   }
 
   // 回退：基于关键词规则的轻量提取
   return ruleBasedExtract(markdown, domain);
+}
+
+/**
+ * 调用 five-elements-ontology 技能的 extract 命令
+ */
+async function callFiveElementsSkill(markdown, domain) {
+  const skillScript = path.join(process.env.HOME, '.workbuddy/skills/five-elements-ontology/scripts/five_elements.py');
+  if (!fs.existsSync(skillScript)) return null;
+
+  const tmpInput = path.join(UPLOAD_DIR, `fe_input_${Date.now()}.json`);
+  const tmpOutput = path.join(UPLOAD_DIR, `fe_output_${Date.now()}.json`);
+
+  // 写入输入文件
+  fs.writeFileSync(tmpInput, JSON.stringify({ content: markdown, domain }, null, 2));
+
+  return new Promise((resolve) => {
+    execFile('python3', [skillScript, 'extract', '--input', tmpInput, '--output', tmpOutput, '--domain', domain || ''], 
+      { timeout: 60000 }, (err, stdout, stderr) => {
+      try { fs.unlinkSync(tmpInput); } catch (_) {}
+
+      if (err) {
+        try { fs.unlinkSync(tmpOutput); } catch (_) {}
+        console.log('[five-elements-ontology] extract failed:', err.message);
+        resolve(null);
+        return;
+      }
+
+      try {
+        const output = JSON.parse(fs.readFileSync(tmpOutput, 'utf-8'));
+        fs.unlinkSync(tmpOutput);
+        
+        if (output.concepts && output.concepts.length > 0) {
+          // 标准化输出格式，确保与前端兼容
+          const concepts = output.concepts.map(c => ({
+            id: c.id || 'tmp_' + uuidv4(),
+            name: c.name || '',
+            suggested_type: c.suggested_type || c.element_type || 'object',
+            element_type: c.element_type || c.suggested_type || 'object',
+            definition: c.definition || '',
+            source_text: c.source_text || '',
+            confidence: typeof c.confidence === 'number' ? c.confidence : 0.7,
+            confirmed: c.confirmed !== undefined ? c.confirmed : true,
+            system_role: c.system_role || 'universal',
+            note: c.note || '',
+          }));
+          console.log(`[five-elements-ontology] 提取到 ${concepts.length} 个概念`);
+          resolve(concepts);
+        } else {
+          resolve(null);
+        }
+      } catch (parseErr) {
+        try { fs.unlinkSync(tmpOutput); } catch (_) {}
+        console.log('[five-elements-ontology] parse output failed:', parseErr.message);
+        resolve(null);
+      }
+    });
+  });
 }
 
 /**

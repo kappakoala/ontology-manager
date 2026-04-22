@@ -1,0 +1,747 @@
+/**
+ * Ontology Manager - Global Design System
+ * 
+ * Design System: Minimalism & Swiss Style
+ * Typography: Fira Code (headings) + Fira Sans (body)
+ * Colors: #1E293B (text) / #475569 (primary) / #2563EB (CTA) / #F8FAFC (bg)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ─────────────────────────────────────────────
+   CSS Custom Properties (Design Tokens)
+   基于 DESIGN.md v1.1 - 暗色专业主题 (OLED暗色)
+   ───────────────────────────────────────────── */
+:root {
+  /* 背景色（由深到浅） */
+  --bg-primary: #0D0D0D;
+  --bg-secondary: #171717;
+  --bg-tertiary: #1F1F1F;
+  --bg-elevated: #262626;
+
+  /* 文字色（由浅到深） */
+  --text-primary: #FFFFFF;
+  --text-secondary: #E5E5E5;
+  --text-tertiary: #A3A3A3;
+  --text-disabled: #525252;
+
+  /* 边框色 */
+  --border-default: #2D2D2D;
+  --border-hover: #404040;
+  --border-focus: #525252;
+
+  /* 主色 */
+  --accent: #3B82F6;
+  --accent-hover: #2563EB;
+  --accent-active: #1D4ED8;
+
+  /* 五要素配色（图表/标签） */
+  --color-subject: #F472B6;
+  --color-action: #60A5FA;
+  --color-object: #34D399;
+  --color-time: #FBBF24;
+  --color-space: #A78BFA;
+
+  /* 系统角色色 */
+  --color-system-active: #60A5FA;
+  --color-system-objective: #F472B6;
+
+  /* 状态色 */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* 问题目标色 */
+  --color-phenomenon: #A78BFA;
+  --color-root: #FBBF24;
+  --color-crux: #EF4444;
+  --color-goal: #22C55E;
+
+  /* 字体系统 */
+  --font-heading: "PingFang SC", "Microsoft YaHei", system-ui;
+  --font-body: "SF Pro Text", -apple-system, system-ui;
+  --font-code: "JetBrains Mono", "SF Mono", monospace;
+  
+  /* 字号层级（行高 1.4） */
+  --font-size-page-title: 18px;
+  --font-size-panel-title: 14px;
+  --font-size-body: 13px;
+  --font-size-label: 12px;
+  --font-size-code: 13px;
+
+  /* 间距系统（基准单位：4px） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* 布局 */
+  --sidebar-width: 240px;
+  --detail-panel-width: 320px;
+  --header-height: 72px;
+
+  /* 过渡动画 */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* 兼容别名（供现有代码使用） */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-tertiary);
+  --color-cta: var(--accent);
+  --color-cta-hover: var(--accent-hover);
+  --color-bg-primary: var(--bg-secondary);
+  --color-bg-secondary: var(--bg-primary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-border: var(--border-default);
+  --color-border-hover: var(--border-hover);
+  --color-element-subject: var(--color-subject);
+  --color-element-behavior: var(--color-action);
+  --color-element-object: var(--color-object);
+  --color-element-time: var(--color-time);
+  --color-element-space: var(--color-space);
+}
+
+/* ─────────────────────────────────────────────
+   Base Styles
+   ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────────────────────────────────────────
+   Typography
+   ───────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h1 { font-size: var(--font-size-page-title); font-weight: 600; }
+h2 { font-size: var(--font-size-panel-title); font-weight: 600; }
+h3 { font-size: var(--font-size-body); font-weight: 500; }
+h4 { font-size: var(--font-size-body); font-weight: 400; }
+
+code, pre {
+  font-family: var(--font-code);
+  font-size: var(--font-size-code);
+  font-weight: 400;
+}
+
+/* ─────────────────────────────────────────────
+   Input Styles
+   基于 DESIGN.md 输入框设计规范
+   ───────────────────────────────────────────── */
+.input {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: 6px;
+  font-size: var(--font-size-body);
+  border: 1px solid var(--border-default);
+  transition: border-color var(--transition-normal);
+}
+
+.input:hover {
+  border-color: var(--border-hover);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.input::placeholder {
+  color: var(--text-disabled);
+}
+
+/* ─────────────────────────────────────────────
+   Focus States (Accessibility)
+   ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   Selection & Scrollbar
+   ───────────────────────────────────────────── */
+::selection {
+  background-color: rgba(37, 99, 235, 0.2);
+  color: var(--color-text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-hover);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}
+
+/* ─────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Utility Classes
+   ───────────────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-slow) ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn var(--transition-slow) ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+
+/* ─────────────────────────────────────────────
+   Element Type Tags (五要素配色)
+   基于 DESIGN.md 五要素配色设计规范
+   ───────────────────────────────────────────── */
+.tag-subject {
+  background-color: rgba(244, 114, 182, 0.2);
+  color: var(--color-subject);
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+
+.tag-behavior {
+  background-color: rgba(96, 165, 250, 0.2);
+  color: var(--color-action);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.tag-object {
+  background-color: rgba(52, 211, 153, 0.2);
+  color: var(--color-object);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.tag-time {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: var(--color-time);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.tag-space {
+  background-color: rgba(167, 139, 250, 0.2);
+  color: var(--color-space);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+/* 系统角色标签 */
+.tag-system-active {
+  background-color: rgba(96, 165, 250, 0.1);
+  color: var(--color-system-active);
+  border: 1px solid var(--color-system-active);
+}
+
+.tag-system-objective {
+  background-color: rgba(244, 114, 182, 0.1);
+  color: var(--color-system-objective);
+  border: 1px solid var(--color-system-objective);
+}
+
+/* 问题目标标签 */
+.tag-phenomenon {
+  background-color: rgba(167, 139, 250, 0.2);
+  color: var(--color-phenomenon);
+  border: 1px solid var(--color-phenomenon);
+}
+
+.tag-root {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: var(--color-root);
+  border: 1px solid var(--color-root);
+}
+
+.tag-crux {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-crux);
+  border: 1px solid var(--color-crux);
+}
+
+.tag-goal {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: var(--color-goal);
+  border: 1px solid var(--color-goal);
+}
+
+/* ─────────────────────────────────────────────
+   Card Styles (概念卡片)
+   基于 DESIGN.md 概念卡片设计规范
+   ───────────────────────────────────────────── */
+.concept-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.concept-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-tertiary);
+}
+
+.concept-card.selected {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.concept-card .name {
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.concept-card .element-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(var(--element-color-rgb), 0.2);
+  color: var(--element-color);
+}
+
+/* 面板样式 */
+.panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+}
+
+.panel-header {
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-panel-title);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-body {
+  padding: var(--space-3);
+}
+
+/* ─────────────────────────────────────────────
+   Button Styles
+   基于 DESIGN.md 按钮设计规范
+   ───────────────────────────────────────────── */
+/* 主要按钮（Primary） */
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-primary);
+  height: 32px;
+  padding: 0 var(--space-4);
+  border-radius: 6px;
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-primary:active {
+  background: var(--accent-active);
+}
+
+/* 次级按钮（Secondary） */
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  height: 32px;
+  padding: 0 var(--space-4);
+  border-radius: 6px;
+  font-size: var(--font-size-body);
+  font-weight: 400;
+  border: 1px solid var(--border-hover);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-focus);
+  background: var(--bg-tertiary);
+}
+
+/* 图标按钮 */
+.btn-icon {
+  background: transparent;
+  color: var(--text-tertiary);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-normal);
+}
+
+.btn-icon:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* ─────────────────────────────────────────────
+   Markdown Content Styles
+   ───────────────────────────────────────────── */
+.markdown-content {
+  font-family: var(--font-body);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-primary);
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-family: var(--font-heading);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content code {
+  background: var(--color-bg-tertiary);
+  padding: 0.125em 0.375em;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-2) var(--spacing-3);
+  text-align: left;
+}
+
+.markdown-content th {
+  background: var(--color-bg-tertiary);
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   Empty States
+   ───────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-10);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--spacing-4);
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-2);
+}
+
+.empty-state-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  max-width: 300px;
+}
+
+/* ─────────────────────────────────────────────
+   Upload Zone
+   ───────────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-12);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: var(--color-bg-secondary);
+}
+
+.upload-zone:hover {
+  border-color: var(--color-cta);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.upload-zone-active {
+  border-color: var(--color-cta);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+/* ─────────────────────────────────────────────
+   Comparison Layout
+   ───────────────────────────────────────────── */
+.comparison-container {
+  display: flex;
+  gap: var(--spacing-6);
+  height: 100%;
+}
+
+.comparison-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.comparison-pane-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
+}
+
+.comparison-pane-content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-4);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.comparison-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--spacing-2);
+  color: var(--color-cta);
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Concept Cards Grid
+   ───────────────────────────────────────────── */
+.concepts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.concept-card {
+  padding: var(--spacing-4);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+
+.concept-card:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.concept-card-selected {
+  border-color: var(--color-cta);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.concept-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-3);
+}
+
+.concept-card-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ─────────────────────────────────────────────
+   Progress Steps
+   ───────────────────────────────────────────── */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  transition: all var(--transition-normal);
+}
+
+.progress-step-active {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-cta);
+}
+
+.progress-step-completed {
+  color: var(--color-success);
+}
+
+.progress-step-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-step-connector {
+  width: 24px;
+  height: 2px;
+  background: var(--color-border);
+}

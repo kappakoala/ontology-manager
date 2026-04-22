@@ -16,6 +16,7 @@ app.use('/api/concepts', require('./routes/concepts'));
 app.use('/api/relations', require('./routes/relations'));
 app.use('/api/problems', require('./routes/problems'));
 app.use('/api/modeling', require('./routes/modeling'));
+app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api', require('./routes/utils'));
 
 // SPA fallback
