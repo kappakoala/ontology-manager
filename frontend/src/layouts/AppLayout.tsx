@@ -7,24 +7,24 @@
 import React from 'react';
 import { Layout, Menu, Typography } from 'antd';
 import {
-  DatabaseOutlined,
-  BuildOutlined,
-  ApartmentOutlined,
-  AimOutlined,
-  DashboardOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+  Database,
+  Blocks,
+  Network,
+  Target,
+  LayoutDashboard,
+  Settings,
+} from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Header, Content } = Layout;
 const { Text } = Typography;
 
 const NAV_ITEMS = [
-  { key: '/browse', icon: <DatabaseOutlined />, label: '本体浏览' },
-  { key: '/modeling', icon: <BuildOutlined />, label: '本体建模' },
-  { key: '/graph', icon: <ApartmentOutlined />, label: '知识图谱' },
-  { key: '/problems', icon: <AimOutlined />, label: '问题目标' },
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
+  { key: '/browse', icon: <Database size={16} />, label: '本体浏览' },
+  { key: '/modeling', icon: <Blocks size={16} />, label: '本体建模' },
+  { key: '/graph', icon: <Network size={16} />, label: '知识图谱' },
+  { key: '/problems', icon: <Target size={16} />, label: '问题目标' },
+  { key: '/dashboard', icon: <LayoutDashboard size={16} />, label: '仪表盘' },
 ];
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -96,7 +96,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           items={[
             {
               key: '/settings',
-              icon: <SettingOutlined />,
+              icon: <Settings size={16} />,
             },
           ]}
           onClick={() => navigate('/settings')}

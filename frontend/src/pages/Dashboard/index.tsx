@@ -21,13 +21,13 @@ import {
   Progress,
 } from 'antd';
 import {
-  DatabaseOutlined,
-  ApartmentOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  RiseOutlined,
-  AimOutlined,
-} from '@ant-design/icons';
+  Database,
+  Network,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  Target,
+} from 'lucide-react';
 import { useOntologyStore } from '../../stores/ontology';
 import { problemApi, goalApi } from '../../services/api';
 import { ELEMENT_CONFIG, SYSTEM_ROLE_LABELS } from '../../types';
@@ -90,7 +90,7 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#A3A3A3' }}>概念总数</span>}
               value={concepts.length}
-              prefix={<DatabaseOutlined style={{ color: '#3B82F6' }} />}
+              prefix={<Database size={16} style={{ color: '#3B82F6' }} />}
               valueStyle={{ color: '#FFFFFF' }}
             />
           </Card>
@@ -100,7 +100,7 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#A3A3A3' }}>关系总数</span>}
               value={relations.length}
-              prefix={<ApartmentOutlined style={{ color: '#A78BFA' }} />}
+              prefix={<Network size={16} style={{ color: '#A78BFA' }} />}
               valueStyle={{ color: '#FFFFFF' }}
             />
           </Card>
@@ -111,7 +111,7 @@ const Dashboard: React.FC = () => {
               title={<span style={{ color: '#A3A3A3' }}>完整性评分</span>}
               value={completenessScore}
               suffix="%"
-              prefix={<CheckCircleOutlined style={{ color: '#22C55E' }} />}
+              prefix={<CheckCircle size={16} style={{ color: '#22C55E' }} />}
               valueStyle={{ color: completenessScore >= 80 ? '#22C55E' : '#F59E0B' }}
             />
           </Card>
@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
             <Statistic
               title={<span style={{ color: '#A3A3A3' }}>问题数</span>}
               value={problems.length}
-              prefix={<ExclamationCircleOutlined style={{ color: '#EF4444' }} />}
+              prefix={<AlertCircle size={16} style={{ color: '#EF4444' }} />}
               valueStyle={{ color: '#FFFFFF' }}
             />
           </Card>

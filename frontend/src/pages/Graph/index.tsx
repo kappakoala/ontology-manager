@@ -21,11 +21,11 @@ import {
   Descriptions,
 } from 'antd';
 import {
-  ZoomInOutlined,
-  ZoomOutOutlined,
-  FullscreenOutlined,
-  ReloadOutlined,
-} from '@ant-design/icons';
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  RefreshCw,
+} from 'lucide-react';
 import * as d3 from 'd3';
 import { graphApi } from '../../services/api';
 import { ELEMENT_CONFIG, SYSTEM_ROLE_LABELS, RELATION_TYPE_CONFIG } from '../../types';
@@ -593,10 +593,10 @@ const Graph: React.FC = () => {
           </Text>
         </Space>
         <Space>
-          <Tooltip title="放大"><Button type="text" size="small" icon={<ZoomInOutlined />} onClick={handleZoomIn} /></Tooltip>
-          <Tooltip title="缩小"><Button type="text" size="small" icon={<ZoomOutOutlined />} onClick={handleZoomOut} /></Tooltip>
-          <Tooltip title="适应画布"><Button type="text" size="small" icon={<FullscreenOutlined />} onClick={handleFitView} /></Tooltip>
-          <Tooltip title="重新布局"><Button type="text" size="small" icon={<ReloadOutlined />} onClick={handleRelayout} /></Tooltip>
+          <Tooltip title="放大"><Button type="text" size="small" icon={<ZoomIn size={14} />} onClick={handleZoomIn} /></Tooltip>
+          <Tooltip title="缩小"><Button type="text" size="small" icon={<ZoomOut size={14} />} onClick={handleZoomOut} /></Tooltip>
+          <Tooltip title="适应画布"><Button type="text" size="small" icon={<Maximize size={14} />} onClick={handleFitView} /></Tooltip>
+          <Tooltip title="重新布局"><Button type="text" size="small" icon={<RefreshCw size={14} />} onClick={handleRelayout} /></Tooltip>
         </Space>
       </div>
 

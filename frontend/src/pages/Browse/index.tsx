@@ -30,14 +30,14 @@ import {
   Tooltip,
 } from 'antd';
 import {
-  PlusOutlined,
-  SearchOutlined,
-  AppstoreOutlined,
-  UnorderedListOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  FolderAddOutlined,
-} from '@ant-design/icons';
+  Plus,
+  Search,
+  LayoutGrid,
+  List,
+  Pencil,
+  Trash2,
+  FolderPlus,
+} from 'lucide-react';
 import { useOntologyStore } from '../../stores/ontology';
 import { ELEMENT_CONFIG, SYSTEM_ROLE_LABELS, RELATION_TYPE_CONFIG } from '../../types';
 import type { Concept, ExtendedElementType, SystemRoleWithUniversal, RelationType } from '../../types';
@@ -252,7 +252,7 @@ const Browse: React.FC = () => {
         {/* 搜索 */}
         <div style={{ padding: '12px 12px 8px' }}>
           <Input
-            prefix={<SearchOutlined style={{ color: '#525252' }} />}
+            prefix={<Search size={14} style={{ color: '#525252' }} />}
             placeholder="搜索概念..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -330,7 +330,7 @@ const Browse: React.FC = () => {
           <Button
             type="text"
             size="small"
-            icon={<FolderAddOutlined />}
+            icon={<FolderPlus size={14} />}
             onClick={openCreateDomain}
             style={{ color: '#525252', marginTop: 4, fontSize: 12 }}
             block
@@ -353,10 +353,10 @@ const Browse: React.FC = () => {
             <Button
               type="text"
               size="small"
-              icon={viewMode === 'card' ? <UnorderedListOutlined /> : <AppstoreOutlined />}
+              icon={viewMode === 'card' ? <List size={14} /> : <LayoutGrid size={14} />}
               onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
             />
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openCreateConcept}>
+            <Button type="primary" size="small" icon={<Plus size={14} />} onClick={openCreateConcept}>
               新建概念
             </Button>
           </Space>
@@ -407,7 +407,7 @@ const Browse: React.FC = () => {
                           <Button
                             type="text"
                             size="small"
-                            icon={<EditOutlined style={{ color: '#525252', fontSize: 12 }} />}
+                            icon={<Pencil size={12} style={{ color: '#525252' }} />}
                             onClick={() => openEditConcept(concept)}
                           />
                         </Tooltip>
@@ -422,7 +422,7 @@ const Browse: React.FC = () => {
                             <Button
                               type="text"
                               size="small"
-                              icon={<DeleteOutlined style={{ color: '#525252', fontSize: 12 }} />}
+                              icon={<Trash2 size={12} style={{ color: '#525252' }} />}
                             />
                           </Tooltip>
                         </Popconfirm>
@@ -471,7 +471,7 @@ const Browse: React.FC = () => {
                 <Button
                   type="text"
                   size="small"
-                  icon={<EditOutlined style={{ color: '#A3A3A3' }} />}
+                  icon={<Pencil size={14} style={{ color: '#A3A3A3' }} />}
                   onClick={() => openEditConcept(selectedConcept)}
                 />
                 <Popconfirm
@@ -484,7 +484,7 @@ const Browse: React.FC = () => {
                   <Button
                     type="text"
                     size="small"
-                    icon={<DeleteOutlined style={{ color: '#EF4444' }} />}
+                    icon={<Trash2 size={14} style={{ color: '#EF4444' }} />}
                   />
                 </Popconfirm>
               </Space>

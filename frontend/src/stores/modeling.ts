@@ -201,49 +201,28 @@ export const useModelingStore = create<ModelingState>((set, get) => ({
   buildRelations: async () => {
     try {
       set({ buildingRelations: true, error: null });
-      const { candidateConcepts } = get();
+      const { candidateConcepts, currentFileId } = get();
       const confirmedConcepts = candidateConcepts.filter((c) => c.confirmed);
 
-      // 启发式规则：基于五要素方法论推导关系
-      const relations: CandidateRelation[] = [];
-      const subjects = confirmedConcepts.filter((c) => c.element_type === 'subject');
-      const behaviors = confirmedConcepts.filter((c) => c.element_type === 'behavior');
-      const objects = confirmedConcepts.filter((c) => c.element_type === 'object');
-      const times = confirmedConcepts.filter((c) => c.element_type === 'time');
-      const spaces = confirmedConcepts.filter((c) => c.element_type === 'space');
+      let relations: CandidateRelation[] = [];
 
-      // 规则1：主体 —实施→ 行为（主体为改变某个对象状态与行为建立的关系）
-      for (const s of subjects) {
-        for (const b of behaviors.slice(0, 3)) { // 限制每个主体最多3条
-          relations.push(makeCandidateRelation(s, b, '实施'));
+      // 优先：调用后端 API 提取关系
+      try {
+        const res = await modelingApi.extractRelations({
+          concepts: confirmedConcepts,
+          domain: undefined, // 后端不依赖此字段，但保留接口
+        });
+        const body = res.data;
+        if (body?.relations && body.relations.length > 0) {
+          relations = body.relations;
         }
+      } catch (apiErr) {
+        console.warn('[buildRelations] 后端 API 调用失败，回退到前端启发式规则', apiErr);
       }
 
-      // 规则2：主体 —利用→ 客体（主体实施行为时与客体发生的关系）
-      for (const s of subjects) {
-        for (const o of objects.slice(0, 3)) {
-          relations.push(makeCandidateRelation(s, o, '利用'));
-        }
-      }
-
-      // 规则3：行为 —在→ 时间/空间
-      for (const b of behaviors) {
-        for (const t of times.slice(0, 2)) {
-          relations.push(makeCandidateRelation(b, t, '在'));
-        }
-        for (const sp of spaces.slice(0, 2)) {
-          relations.push(makeCandidateRelation(b, sp, '在'));
-        }
-      }
-
-      // 规则4：行为 —输出→ 客体（如果行为和客体有关）
-      for (const b of behaviors) {
-        for (const o of objects.slice(0, 2)) {
-          // 避免与"利用"重复（不同主体）
-          if (!relations.some(r => r.source_id === b.id && r.target_id === o.id)) {
-            relations.push(makeCandidateRelation(b, o, '输出'));
-          }
-        }
+      // 回退：前端启发式规则（后端返回空或失败时）
+      if (relations.length === 0) {
+        relations = buildHeuristicRelations(confirmedConcepts);
       }
 
       set({
@@ -293,11 +272,80 @@ export const useModelingStore = create<ModelingState>((set, get) => ({
 
 // ─── 辅助函数 ───
 
+/** 前端启发式关系推导（后端 API 不可用时的 fallback） */
+function buildHeuristicRelations(confirmedConcepts: CandidateConcept[]): CandidateRelation[] {
+  const relations: CandidateRelation[] = [];
+  const subjects = confirmedConcepts.filter((c) => c.element_type === 'subject');
+  const behaviors = confirmedConcepts.filter((c) => c.element_type === 'behavior');
+  const objects = confirmedConcepts.filter((c) => c.element_type === 'object');
+  const times = confirmedConcepts.filter((c) => c.element_type === 'time');
+  const spaces = confirmedConcepts.filter((c) => c.element_type === 'space');
+  const problems = confirmedConcepts.filter((c) => c.element_type === 'problem');
+  const goals = confirmedConcepts.filter((c) => c.element_type === 'goal');
+
+  const exists = (srcId: string, tgtId: string, relType: string) =>
+    relations.some(r => r.source_id === srcId && r.target_id === tgtId && r.relation_type === relType);
+
+  // 主体 → 实施 → 行为
+  for (const s of subjects) {
+    for (const b of behaviors.slice(0, 5)) {
+      if (!exists(s.id, b.id, '实施')) relations.push(makeCandidateRelation(s, b, '实施', 0.7));
+    }
+  }
+  // 主体 → 利用 → 客体
+  for (const s of subjects) {
+    for (const o of objects.slice(0, 5)) {
+      if (!exists(s.id, o.id, '利用')) relations.push(makeCandidateRelation(s, o, '利用', 0.65));
+    }
+  }
+  // 行为 → 在 → 时间/空间
+  for (const b of behaviors) {
+    for (const t of times.slice(0, 2)) {
+      if (!exists(b.id, t.id, '在')) relations.push(makeCandidateRelation(b, t, '在', 0.6));
+    }
+    for (const sp of spaces.slice(0, 2)) {
+      if (!exists(b.id, sp.id, '在')) relations.push(makeCandidateRelation(b, sp, '在', 0.6));
+    }
+  }
+  // 行为 → 输出 → 客体
+  for (const b of behaviors) {
+    for (const o of objects.slice(0, 3)) {
+      if (!exists(b.id, o.id, '输出')) relations.push(makeCandidateRelation(b, o, '输出', 0.55));
+    }
+  }
+  // 主体 → 制定 → 目标
+  for (const s of subjects) {
+    for (const g of goals.slice(0, 3)) {
+      if (!exists(s.id, g.id, '制定')) relations.push(makeCandidateRelation(s, g, '制定', 0.6));
+    }
+  }
+  // 对象系统 → 提出 → 问题
+  const objSubjects = subjects.filter(s => s.system_role === 'object_system');
+  for (const s of objSubjects.length > 0 ? objSubjects : subjects.slice(0, 1)) {
+    for (const p of problems.slice(0, 3)) {
+      if (!exists(s.id, p.id, '提出')) relations.push(makeCandidateRelation(s, p, '提出', 0.65));
+    }
+  }
+  // 目标 → 解决 → 问题
+  for (const g of goals) {
+    for (const p of problems.slice(0, 3)) {
+      if (!exists(g.id, p.id, '解决')) relations.push(makeCandidateRelation(g, p, '解决', 0.6));
+    }
+  }
+  // 行为 → 前置 → 行为
+  for (let i = 0; i < behaviors.length - 1; i++) {
+    relations.push(makeCandidateRelation(behaviors[i], behaviors[i + 1], '前置', 0.5));
+  }
+
+  return relations;
+}
+
 /** 生成候选关系 */
 function makeCandidateRelation(
   source: CandidateConcept,
   target: CandidateConcept,
   relationType: CandidateRelation['relation_type'],
+  confidence = 0.6,
 ): CandidateRelation {
   return {
     id: 'tmp_rel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
@@ -306,7 +354,7 @@ function makeCandidateRelation(
     target_id: target.id,
     target_name: target.name,
     relation_type: relationType,
-    confidence: 0.6,
-    confirmed: false, // 需要用户确认
+    confidence,
+    confirmed: false,
   };
 }

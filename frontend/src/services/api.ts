@@ -112,6 +112,8 @@ export const modelingApi = {
   preview: (fileId: string) => api.get(`/modeling/preview/${fileId}`),
   extract: (data: { fileId: string; markdown?: string; domain?: string }) =>
     api.post('/modeling/extract', data),
+  extractRelations: (data: { concepts: CandidateConcept[]; domain?: string }) =>
+    api.post('/modeling/extract-relations', data),
   save: (data: { domainId?: string; domainName?: string; concepts: CandidateConcept[]; relations: CandidateRelation[] }) =>
     api.post('/modeling/save', data),
   relationTypes: () => api.get('/modeling/relation-types'),

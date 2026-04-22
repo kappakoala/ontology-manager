@@ -26,11 +26,11 @@ import {
   message,
 } from 'antd';
 import {
-  PlusOutlined,
-  AimOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+  Plus,
+  Target,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { problemApi, goalApi } from '../../services/api';
 import {
   PROBLEM_LEVEL_LABELS,
@@ -164,13 +164,13 @@ const ProblemGoal: React.FC = () => {
         <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid #2D2D2D' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Space>
-              <ExclamationCircleOutlined style={{ color: '#EF4444' }} />
+              <AlertCircle size={14} style={{ color: '#EF4444' }} />
               <Text strong style={{ fontSize: 14 }}>问题库</Text>
             </Space>
             <Button
               type="text"
               size="small"
-              icon={<PlusOutlined />}
+              icon={<Plus size={14} />}
               onClick={() => setCreateModalOpen(true)}
             />
           </div>
@@ -225,7 +225,7 @@ const ProblemGoal: React.FC = () => {
                     <div key={goal.id} style={{ marginBottom: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Space>
-                          <AimOutlined style={{ color: GOAL_STATUS_COLORS[goal.status] }} />
+                          <Target size={14} style={{ color: GOAL_STATUS_COLORS[goal.status] }} />
                           <Text style={{ color: '#E5E5E5' }}>{goal.name}</Text>
                         </Space>
                         <Tag color={GOAL_STATUS_COLORS[goal.status]}>

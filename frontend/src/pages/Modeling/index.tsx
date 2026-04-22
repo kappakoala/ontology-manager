@@ -16,11 +16,11 @@ import {
   Input, Progress, Empty, Popconfirm, Drawer, Form, Slider, Tooltip, Divider, Flex,
 } from 'antd';
 import {
-  UploadOutlined, FileSearchOutlined, ThunderboltOutlined,
-  ApartmentOutlined, SaveOutlined, DeleteOutlined, CheckOutlined,
-  EditOutlined, PlusOutlined, ArrowRightOutlined, FileTextOutlined,
-  CheckCircleOutlined, ExclamationCircleOutlined,
-} from '@ant-design/icons';
+  Upload, FileSearch, Zap,
+  Network, Save, Trash2, Check,
+  Pencil, Plus, ArrowRight, FileText,
+  CheckCircle, AlertCircle,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useModelingStore } from '../../stores/modeling';
@@ -36,11 +36,11 @@ const { Text, Title } = Typography;
 
 // ─── 步骤配置 ───
 const STEP_CONFIG: { key: ModelingStep; title: string; icon: React.ReactNode; desc: string }[] = [
-  { key: 'upload', title: '文档上传', icon: <UploadOutlined />, desc: '上传待解析的领域文档' },
-  { key: 'preview', title: '预览解析', icon: <FileSearchOutlined />, desc: '查看文档转换结果' },
-  { key: 'extract', title: '要素提取', icon: <ThunderboltOutlined />, desc: 'AI 辅助提取五要素' },
-  { key: 'relation', title: '关系建立', icon: <ApartmentOutlined />, desc: '确认概念间关系' },
-  { key: 'save', title: '保存验证', icon: <SaveOutlined />, desc: '保存到知识库' },
+  { key: 'upload', title: '文档上传', icon: <Upload size={16} />, desc: '上传待解析的领域文档' },
+  { key: 'preview', title: '预览解析', icon: <FileSearch size={16} />, desc: '查看文档转换结果' },
+  { key: 'extract', title: '要素提取', icon: <Zap size={16} />, desc: 'AI 辅助提取五要素' },
+  { key: 'relation', title: '关系建立', icon: <Network size={16} />, desc: '确认概念间关系' },
+  { key: 'save', title: '保存验证', icon: <Save size={16} />, desc: '保存到知识库' },
 ];
 
 const STEP_INDEX: Record<ModelingStep, number> = {
@@ -190,7 +190,7 @@ const Modeling: React.FC = () => {
           padding: '32px 24px',
         }}
       >
-        <UploadOutlined style={{ fontSize: 36, color: THEME.accent, marginBottom: 12 }} />
+        <Upload size={36} style={{ color: THEME.accent, marginBottom: 12 }} />
         <div><Text style={{ color: THEME.textSecondary, fontSize: 14 }}>点击或拖拽文件到此区域上传</Text></div>
         <div style={{ marginTop: 6 }}>
           <Text style={{ color: THEME.textTertiary, fontSize: 12 }}>
@@ -201,7 +201,7 @@ const Modeling: React.FC = () => {
 
       <Button
         type="link"
-        icon={<FileTextOutlined />}
+        icon={<FileText size={14} />}
         onClick={handleTextUpload}
         style={{ marginTop: 8, color: THEME.accent, padding: 0 }}
       >
@@ -225,7 +225,7 @@ const Modeling: React.FC = () => {
               alignItems: 'center',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FileTextOutlined style={{ color: THEME.accent }} />
+                <FileText size={14} style={{ color: THEME.accent }} />
                 <Text style={{ color: THEME.textPrimary, fontSize: 13 }}>{f.filename}</Text>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -234,7 +234,7 @@ const Modeling: React.FC = () => {
                   type="text"
                   size="small"
                   danger
-                  icon={<DeleteOutlined />}
+                  icon={<Trash2 size={14} />}
                   onClick={() => removeFile(f.fileId)}
                 />
               </div>
@@ -266,7 +266,7 @@ const Modeling: React.FC = () => {
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       {uploadedFiles.length > 0 && (
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileTextOutlined style={{ color: THEME.accent }} />
+          <FileText size={14} style={{ color: THEME.accent }} />
           <Text style={{ color: THEME.textSecondary, fontSize: 13 }}>
             {uploadedFiles[0]?.filename} · {uploadedFiles[0]?.charCount} 字
           </Text>
@@ -302,7 +302,7 @@ const Modeling: React.FC = () => {
     if (extracting) {
       return (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <ThunderboltOutlined style={{ fontSize: 48, color: THEME.accent, marginBottom: 16 }} />
+          <Zap size={48} style={{ color: THEME.accent, marginBottom: 16 }} />
           <Title level={4} style={{ color: THEME.textPrimary, marginBottom: 8 }}>AI 正在提取五要素...</Title>
           <Text style={{ color: THEME.textSecondary }}>
             优先使用 five-elements-ontology 技能，回退到规则基线提取
@@ -332,7 +332,7 @@ const Modeling: React.FC = () => {
             )}
           </Space>
           <Space>
-            <Button size="small" onClick={confirmAllConcepts} icon={<CheckOutlined />}>
+            <Button size="small" onClick={confirmAllConcepts} icon={<Check size={14} />}>
               全部确认
             </Button>
           </Space>
@@ -393,7 +393,7 @@ const Modeling: React.FC = () => {
     if (buildingRelations) {
       return (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <ApartmentOutlined style={{ fontSize: 48, color: THEME.accent, marginBottom: 16 }} />
+          <Network size={48} style={{ color: THEME.accent, marginBottom: 16 }} />
           <Title level={4} style={{ color: THEME.textPrimary, marginBottom: 8 }}>正在建立关系...</Title>
           <Progress percent={100} status="active" style={{ maxWidth: 300, margin: '20px auto' }} />
         </div>
@@ -415,13 +415,13 @@ const Modeling: React.FC = () => {
             </Text>
           </Space>
           <Space>
-            <Button size="small" onClick={confirmAllRelations} icon={<CheckOutlined />}>
+            <Button size="small" onClick={confirmAllRelations} icon={<Check size={14} />}>
               全部确认
             </Button>
             <Button
               size="small"
               type="primary"
-              icon={<PlusOutlined />}
+              icon={<Plus size={14} />}
               onClick={() => setAddRelationOpen(true)}
             >
               添加关系
@@ -443,7 +443,7 @@ const Modeling: React.FC = () => {
             />
             <Button
               type="primary"
-              icon={<PlusOutlined />}
+              icon={<Plus size={14} />}
               onClick={() => setAddRelationOpen(true)}
               style={{ marginTop: 16 }}
             >
@@ -491,7 +491,7 @@ const Modeling: React.FC = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 20px',
           }}>
-            <SaveOutlined style={{ fontSize: 32, color: THEME.success }} />
+            <Save size={32} style={{ color: THEME.success }} />
           </div>
 
           <Title level={4} style={{ color: THEME.textPrimary, marginBottom: 12 }}>
@@ -562,7 +562,7 @@ const Modeling: React.FC = () => {
           <Button
             type="primary"
             size="large"
-            icon={<SaveOutlined />}
+            icon={<Save size={14} />}
             onClick={handleSave}
             loading={saving}
             disabled={!domainName.trim() || confirmedConcepts.length === 0}
@@ -576,7 +576,7 @@ const Modeling: React.FC = () => {
       {/* 保存中 */}
       {saving && (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <SaveOutlined style={{ fontSize: 48, color: THEME.accent, marginBottom: 16 }} />
+          <Save size={48} style={{ color: THEME.accent, marginBottom: 16 }} />
           <Title level={4} style={{ color: THEME.textPrimary }}>正在保存...</Title>
           <Progress percent={100} status="active" style={{ maxWidth: 300, margin: '20px auto' }} />
         </div>
@@ -619,7 +619,7 @@ const Modeling: React.FC = () => {
             alignItems: 'center',
             gap: 8,
           }}>
-            <ExclamationCircleOutlined />
+            <AlertCircle size={14} />
             {error}
           </div>
         )}
@@ -719,7 +719,7 @@ const ConceptCard: React.FC<ConceptCardProps> = ({
             <Button
               type="text"
               size="small"
-              icon={<CheckOutlined />}
+              icon={<Check size={14} />}
               style={{
                 color: concept.confirmed ? THEME.success : THEME.textTertiary,
                 background: concept.confirmed ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
@@ -728,11 +728,11 @@ const ConceptCard: React.FC<ConceptCardProps> = ({
             />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button type="text" size="small" icon={<EditOutlined />} onClick={onEdit}
+            <Button type="text" size="small" icon={<Pencil size={14} />} onClick={onEdit}
               style={{ color: THEME.textTertiary }} />
           </Tooltip>
           <Tooltip title="删除">
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={onRemove} />
+            <Button type="text" size="small" danger icon={<Trash2 size={14} />} onClick={onRemove} />
           </Tooltip>
         </Space>
       </div>
@@ -866,7 +866,7 @@ const RelationCard: React.FC<RelationCardProps> = ({ relation, onToggleConfirm, 
       <Button
         type="text"
         size="small"
-        icon={<CheckOutlined />}
+        icon={<Check size={14} />}
         style={{
           color: relation.confirmed ? THEME.success : THEME.textTertiary,
           background: relation.confirmed ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
@@ -885,14 +885,14 @@ const RelationCard: React.FC<RelationCardProps> = ({ relation, onToggleConfirm, 
         display: 'flex', alignItems: 'center', gap: 4,
         flexShrink: 0,
       }}>
-        <ArrowRightOutlined style={{ color: isDynamic ? '#4B7EB8' : THEME.textTertiary, fontSize: 10 }} />
+        <ArrowRight size={10} style={{ color: isDynamic ? '#4B7EB8' : THEME.textTertiary }} />
         <Tag
           color={isDynamic ? 'blue' : 'default'}
           style={{ margin: 0, fontSize: 11 }}
         >
           {relation.relation_type}
         </Tag>
-        <ArrowRightOutlined style={{ color: isDynamic ? '#4B7EB8' : THEME.textTertiary, fontSize: 10 }} />
+        <ArrowRight size={10} style={{ color: isDynamic ? '#4B7EB8' : THEME.textTertiary }} />
       </div>
 
       {/* 目标概念 */}
@@ -911,7 +911,7 @@ const RelationCard: React.FC<RelationCardProps> = ({ relation, onToggleConfirm, 
       <div style={{ flex: 1 }} />
 
       <Tooltip title="删除">
-        <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={onRemove} />
+        <Button type="text" size="small" danger icon={<Trash2 size={14} />} onClick={onRemove} />
       </Tooltip>
     </div>
   );
@@ -1026,7 +1026,7 @@ const AddRelationDrawer: React.FC<AddRelationDrawerProps> = ({ open, onClose, co
           />
         </div>
 
-        <Button type="primary" block icon={<PlusOutlined />} onClick={handleAdd}>
+        <Button type="primary" block icon={<Plus size={14} />} onClick={handleAdd}>
           添加关系
         </Button>
       </div>

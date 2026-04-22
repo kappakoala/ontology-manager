@@ -180,6 +180,30 @@ router.post('/save', (req, res) => {
 });
 
 /**
+ * POST /api/modeling/extract-relations
+ * Body: { concepts: CandidateConcept[], domain? }
+ * 基于已确认概念推导候选关系（优先调用技能，回退到规则基线）
+ */
+router.post('/extract-relations', async (req, res) => {
+  const { concepts = [], domain = '' } = req.body;
+  if (!concepts.length) return res.status(400).json({ success: false, error: '没有候选概念' });
+
+  try {
+    // 优先：调用 five-elements-ontology 技能的关系提取
+    const skillRelations = await callFiveElementsRelationExtract(concepts, domain);
+    if (skillRelations && skillRelations.length > 0) {
+      return res.json({ success: true, relations: skillRelations });
+    }
+
+    // 回退：基于五要素方法论的启发式规则推导
+    const relations = ruleBasedRelationExtract(concepts);
+    res.json({ success: true, relations });
+  } catch (e) {
+    res.status(500).json({ success: false, error: '关系提取失败: ' + e.message });
+  }
+});
+
+/**
  * GET /api/modeling/relation-types
  */
 router.get('/relation-types', (req, res) => {
@@ -501,6 +525,215 @@ function ruleBasedExtract(markdown, domain) {
   }
 
   return concepts;
+}
+
+// ──────────────────────────────────────
+// 关系提取函数
+// ──────────────────────────────────────
+
+/**
+ * 调用 five-elements-ontology 技能的关系提取
+ */
+async function callFiveElementsRelationExtract(concepts, domain) {
+  const skillScript = path.join(process.env.HOME, '.workbuddy/skills/five-elements-ontology/scripts/five_elements.py');
+  if (!fs.existsSync(skillScript)) return null;
+
+  const tmpInput = path.join(UPLOAD_DIR, `fe_rel_input_${Date.now()}.json`);
+  const tmpOutput = path.join(UPLOAD_DIR, `fe_rel_output_${Date.now()}.json`);
+
+  // 写入输入：概念列表
+  fs.writeFileSync(tmpInput, JSON.stringify({ concepts, domain }, null, 2));
+
+  return new Promise((resolve) => {
+    execFile('python3', [skillScript, 'extract-relations', '--input', tmpInput, '--output', tmpOutput, '--domain', domain || ''],
+      { timeout: 60000 }, (err, stdout, stderr) => {
+      try { fs.unlinkSync(tmpInput); } catch (_) {}
+
+      if (err) {
+        try { fs.unlinkSync(tmpOutput); } catch (_) {}
+        console.log('[five-elements-ontology] extract-relations failed:', err.message);
+        resolve(null);
+        return;
+      }
+
+      try {
+        const output = JSON.parse(fs.readFileSync(tmpOutput, 'utf-8'));
+        fs.unlinkSync(tmpOutput);
+
+        if (output.relations && output.relations.length > 0) {
+          console.log(`[five-elements-ontology] 提取到 ${output.relations.length} 条关系`);
+          resolve(output.relations);
+        } else {
+          resolve(null);
+        }
+      } catch (parseErr) {
+        try { fs.unlinkSync(tmpOutput); } catch (_) {}
+        console.log('[five-elements-ontology] parse relations output failed:', parseErr.message);
+        resolve(null);
+      }
+    });
+  });
+}
+
+/**
+ * 基于五要素方法论的启发式关系推导
+ *
+ * 规则体系（对应方法论核心关系类型）：
+ * 1. 主体 —实施→ 行为：主体改变对象状态的行为
+ * 2. 主体 —利用→ 客体：主体实施行为时与客体的关系
+ * 3. 行为 —在→ 时间/空间：行为发生的时间空间
+ * 4. 行为 —输出→ 客体：行为产生的结果客体
+ * 5. 行为 —依据→ 客体：行为所依据的客体
+ * 6. 行为 —输入→ 客体：行为所输入的客体
+ * 7. 主体 —制定→ 目标：主体制定目标
+ * 8. 对象系统 —提出→ 问题：对象系统提出问题
+ * 9. 目标 —解决→ 问题：目标解决问题
+ * 10. 指标 —表现→ 问题/目标：用指标刻画问题和目标
+ * 11. 主体 —确认→ 领域：确认当前领域
+ * 12. 行为 —前置→ 行为：行为先后顺序
+ */
+function ruleBasedRelationExtract(concepts) {
+  const relations = [];
+  const confirmed = concepts.filter(c => c.confirmed !== false);
+
+  const subjects = confirmed.filter(c => c.element_type === 'subject');
+  const behaviors = confirmed.filter(c => c.element_type === 'behavior');
+  const objects = confirmed.filter(c => c.element_type === 'object');
+  const times = confirmed.filter(c => c.element_type === 'time');
+  const spaces = confirmed.filter(c => c.element_type === 'space');
+  const problems = confirmed.filter(c => c.element_type === 'problem');
+  const goals = confirmed.filter(c => c.element_type === 'goal');
+  const indicators = confirmed.filter(c => c.element_type === 'indicator');
+
+  // 辅助：生成关系对象
+  function makeRel(source, target, relationType, confidence = 0.6) {
+    return {
+      id: 'tmp_rel_' + uuidv4(),
+      source_id: source.id,
+      source_name: source.name,
+      target_id: target.id,
+      target_name: target.name,
+      relation_type: relationType,
+      confidence,
+      confirmed: false,
+    };
+  }
+
+  // 辅助：检查关系是否已存在（避免重复）
+  function exists(srcId, tgtId, relType) {
+    return relations.some(r => r.source_id === srcId && r.target_id === tgtId && r.relation_type === relType);
+  }
+
+  // 规则1：主体 —实施→ 行为
+  for (const s of subjects) {
+    const limit = Math.min(behaviors.length, 5);
+    for (let i = 0; i < limit; i++) {
+      if (!exists(s.id, behaviors[i].id, '实施')) {
+        relations.push(makeRel(s, behaviors[i], '实施', 0.7));
+      }
+    }
+  }
+
+  // 规则2：主体 —利用→ 客体
+  for (const s of subjects) {
+    const limit = Math.min(objects.length, 5);
+    for (let i = 0; i < limit; i++) {
+      if (!exists(s.id, objects[i].id, '利用')) {
+        relations.push(makeRel(s, objects[i], '利用', 0.65));
+      }
+    }
+  }
+
+  // 规则3：行为 —在→ 时间/空间
+  for (const b of behaviors) {
+    for (const t of times.slice(0, 2)) {
+      if (!exists(b.id, t.id, '在')) {
+        relations.push(makeRel(b, t, '在', 0.6));
+      }
+    }
+    for (const sp of spaces.slice(0, 2)) {
+      if (!exists(b.id, sp.id, '在')) {
+        relations.push(makeRel(b, sp, '在', 0.6));
+      }
+    }
+  }
+
+  // 规则4：行为 —输出→ 客体
+  for (const b of behaviors) {
+    const limit = Math.min(objects.length, 3);
+    for (let i = 0; i < limit; i++) {
+      if (!exists(b.id, objects[i].id, '输出')) {
+        relations.push(makeRel(b, objects[i], '输出', 0.55));
+      }
+    }
+  }
+
+  // 规则5：行为 —依据→ 客体（与输出交替）
+  for (const b of behaviors) {
+    for (let i = Math.min(objects.length, 3); i < Math.min(objects.length, 6); i++) {
+      if (!exists(b.id, objects[i].id, '依据')) {
+        relations.push(makeRel(b, objects[i], '依据', 0.5));
+      }
+    }
+  }
+
+  // 规则6：行为 —输入→ 客体
+  for (const b of behaviors) {
+    for (const o of objects.slice(0, 2)) {
+      if (!exists(b.id, o.id, '输入') && !exists(b.id, o.id, '输出') && !exists(b.id, o.id, '依据')) {
+        relations.push(makeRel(b, o, '输入', 0.5));
+      }
+    }
+  }
+
+  // 规则7：主体 —制定→ 目标
+  for (const s of subjects) {
+    for (const g of goals.slice(0, 3)) {
+      if (!exists(s.id, g.id, '制定')) {
+        relations.push(makeRel(s, g, '制定', 0.6));
+      }
+    }
+  }
+
+  // 规则8：对象系统 —提出→ 问题
+  const objSystemSubjects = subjects.filter(s => s.system_role === 'object_system');
+  for (const s of objSystemSubjects.length > 0 ? objSystemSubjects : subjects.slice(0, 1)) {
+    for (const p of problems.slice(0, 3)) {
+      if (!exists(s.id, p.id, '提出')) {
+        relations.push(makeRel(s, p, '提出', 0.65));
+      }
+    }
+  }
+
+  // 规则9：目标 —解决→ 问题
+  for (const g of goals) {
+    for (const p of problems.slice(0, 3)) {
+      if (!exists(g.id, p.id, '解决')) {
+        relations.push(makeRel(g, p, '解决', 0.6));
+      }
+    }
+  }
+
+  // 规则10：指标 —表现→ 问题/目标
+  for (const ind of indicators) {
+    for (const p of problems.slice(0, 2)) {
+      if (!exists(ind.id, p.id, '表现')) {
+        relations.push(makeRel(ind, p, '表现', 0.55));
+      }
+    }
+    for (const g of goals.slice(0, 2)) {
+      if (!exists(ind.id, g.id, '表现')) {
+        relations.push(makeRel(ind, g, '表现', 0.55));
+      }
+    }
+  }
+
+  // 规则12：行为 —前置→ 行为（按出现顺序）
+  for (let i = 0; i < behaviors.length - 1; i++) {
+    relations.push(makeRel(behaviors[i], behaviors[i + 1], '前置', 0.5));
+  }
+
+  return relations;
 }
 
 module.exports = router;
